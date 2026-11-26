@@ -1,0 +1,343 @@
+<!--
+  ミレアの鑑定所 v1 — StoryEngine ステータスビュー（上級モード）用 / 鑑定所ストーリーノード専用
+  変数 abyss_state（JSON文字列）と appraisal（鑑定書のJSON文字列）を読みます。推奨サイズ 500 × 1000
+  画像は GitHub Pages（https://tora0306.github.io/BD/3/）から読み込みます。
+  鑑定・売却の相談は会話欄に文を入れるだけ。「送る」で送信（クレジット消費）。退店ボタンは2回押し。
+-->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Shippori+Mincho+B1:wght@600;800&display=swap">
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#0d1a18}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+.office{--gd:#d9b45a;--gh:#f3dc9a;--ink:#eef3ee;--mn:'Shippori Mincho B1','Yu Mincho',serif;--cz:Cinzel,Georgia,serif;
+  height:100vh;display:flex;flex-direction:column;padding-bottom:8px;color:var(--ink);font:13px/1.5 'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;
+  background:radial-gradient(120% 60% at 50% 0,#1f3b36,transparent 70%),repeating-linear-gradient(45deg,#ffffff04 0 2px,transparent 2px 18px),linear-gradient(#142824,#0b1614)}
+
+/* 看板 */
+.title{position:relative;flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:34px;margin:8px 10px 0;border-radius:5px 5px 0 0;
+  background:linear-gradient(#2f5a52,#1c3a34);border:2px solid #0b1614;border-bottom:0;box-shadow:inset 0 1px 0 #6fa898,inset 0 0 0 1px #d9b45a55}
+.title b{font:800 16px/1 var(--mn);letter-spacing:.22em;color:#fbf3dc;text-shadow:0 2px 0 #0b1614,0 0 10px #d9b45a77}
+.title span{font:700 8.5px/1 var(--cz);letter-spacing:.3em;color:var(--gh)}
+.title .exit{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:4px;border:1px solid #0b1614;background:linear-gradient(#2a4a44,#16302b);color:#f3e6c0;font:700 11px/1 var(--mn)}
+.title .exit:hover{filter:brightness(1.2)}
+.title .exit.arm{background:linear-gradient(#e0b44a,#a8781c);color:#fff}
+
+/* 鑑定所（背景 3:2。キャラはカウンターの後ろ） */
+.scene{position:relative;flex:none;margin:0 10px;aspect-ratio:3/2;overflow:hidden;border:2px solid #0b1614;border-radius:0 0 5px 5px;box-shadow:0 6px 14px #000c;
+  background:linear-gradient(#5f9488 0 55%,#d8d2bf 55%)}
+.scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scene::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 100% at 50% 40%,transparent 60%,#0006)}
+.keeper{position:absolute;left:60%;top:13.5%;width:24%;aspect-ratio:1;z-index:1;animation:breath 3.8s ease-in-out infinite;transform-origin:50% 100%}
+.keeper img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .18s}
+.keeper img.off{opacity:0}
+.keeper.hop{animation:hop .35s ease-out,breath 3.8s ease-in-out .35s infinite}
+@keyframes breath{50%{transform:translateY(-1.5px)}}
+@keyframes hop{40%{transform:translateY(-5px)}}
+.glint{position:absolute;left:61.5%;top:31%;width:5%;aspect-ratio:1;z-index:2;pointer-events:none;border-radius:50%;background:radial-gradient(circle,#fff 0 12%,#fff8 20%,transparent 60%);opacity:0}
+.glint.on{animation:glint 1.1s ease-out}
+@keyframes glint{0%{opacity:0;transform:scale(.4) rotate(0)}30%{opacity:1}100%{opacity:0;transform:scale(1.6) rotate(90deg)}}
+.bubble{position:absolute;left:21%;top:6%;width:37%;z-index:2;padding:9px 12px 10px;border-radius:12px;background:#fbf8ef;color:#23302c;
+  font:700 12.5px/1.6 var(--mn);box-shadow:0 3px 0 #a9b9a8,0 6px 12px #0007;border:2px solid #2f5a52}
+.bubble::after{content:"";position:absolute;right:-13px;top:45%;border:9px solid transparent;border-left:13px solid #2f5a52;border-right:0}
+.bubble::before{content:"";position:absolute;right:-9px;top:calc(45% + 2px);border:7px solid transparent;border-left:10px solid #fbf8ef;border-right:0;z-index:1}
+.bubble small{display:block;margin-bottom:3px;font:800 10px/1 var(--mn);letter-spacing:.18em;color:#3c7a6a}
+.bubble.pop{animation:pop .3s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(4px) scale(.96)}}
+.purse{position:absolute;left:3%;bottom:4%;z-index:2;display:flex;align-items:center;gap:8px;padding:6px 14px 6px 8px;border-radius:6px;
+  background:linear-gradient(#2f4a44,#18302b);border:2px solid #0b1614;box-shadow:inset 0 0 0 1px #d9b45a55,0 4px 10px #000a}
+.coin{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2b8,#e0b04a 45%,#8a6420);box-shadow:0 0 0 2px #5a3f14,0 0 8px #f0b45a88}
+.purse b{font:700 19px/1 var(--cz);color:#ffe0a6;text-shadow:0 0 10px #f0b45a66;font-variant-numeric:tabular-nums}
+.purse small{font:700 11px/1 var(--cz);color:#f0b45a}
+.purse .pop{position:absolute;left:40px;top:-16px;font:700 13px/1 var(--cz);text-shadow:0 1px 3px #000;animation:rise 1.2s ease-out forwards}
+.purse .pop.dn{color:#ff9b8e}.purse .pop.up{color:#9ff0b0}
+@keyframes rise{0%{opacity:0;transform:translateY(4px)}15%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+.err{position:absolute;left:3%;right:3%;top:3%;z-index:3;padding:5px 8px;font-size:11px;color:#ffd0c0;background:#7a2a1acc;border-radius:4px}
+
+/* タブ */
+.tabs{flex:none;display:flex;gap:4px;margin:9px 10px 0}
+.tabs button{flex:1;padding:8px 0 7px;border:1px solid #2f5a52;border-bottom:0;border-radius:6px 6px 0 0;background:linear-gradient(#1f3b36,#132622);color:#a9c4b8;font:700 12.5px/1 var(--mn);letter-spacing:.1em}
+.tabs button.on{background:linear-gradient(#f7f3e6,#e8e0c8);color:#23302c;border-color:#c9b98a;box-shadow:0 -2px 10px #d9b45a44}
+
+/* 台帳（本文） */
+.ledger{flex:1;min-height:0;overflow:auto;margin:0 10px;padding:11px 12px;border:1px solid #c9b98a;border-radius:0 0 4px 4px;color:#23302c;
+  background:repeating-linear-gradient(#0000 0 25px,#3c7a6a18 25px 26px),radial-gradient(120% 80% at 50% 0,#fbf8ef,#ece4cc);box-shadow:inset 0 0 18px #2f5a5233;scrollbar-width:thin;scrollbar-color:#8aa89a transparent}
+.pane{display:none}.pane.on{display:block;animation:pop .25s ease-out}
+.h{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:800 13px/1 var(--mn);letter-spacing:.14em;color:#2f5a52}
+.h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#8aa89a,transparent)}
+.h .sub{order:2;font:600 10.5px/1 var(--mn);letter-spacing:.04em;color:#6a8a7e}
+.muted{font-size:12px;color:#7a8a84}
+.note{margin:8px 0 0;font-size:11.5px;color:#5a6a64}
+
+/* 素材の行 */
+.row{display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px dashed #8aa89a88}
+.row.sel{background:#d9b45a22}
+.row .n{flex:1;min-width:0;font:800 12.5px/1.3 var(--mn)}
+.row .n small{display:block;font:400 10.5px/1.3 sans-serif;color:#6a7a74}
+.row .val{flex:none;font:700 12px var(--cz);color:#7a5a1c;text-align:right}
+.row .val small{display:block;font:400 10px sans-serif;color:#8a8a7a}
+.gem{flex:none;width:18px;height:18px;transform:rotate(45deg);border-radius:3px;background:radial-gradient(circle at 30% 30%,#fff 0 2px,var(--c) 5px,#1d2a28 95%);border:2px solid #2f4a44;box-shadow:0 0 5px var(--c)}
+.chk{flex:none;width:20px;height:20px;border-radius:4px;border:2px solid #6a8a7e;background:#fff;display:grid;place-items:center;font:800 13px/1 sans-serif;color:#2f5a52}
+.row.sel .chk{background:#2f5a52;color:#fff;border-color:#2f5a52}
+.step{display:flex;align-items:center;gap:4px}
+.step button{width:23px;height:23px;border-radius:50%;border:1px solid #6a8a7e;background:radial-gradient(#fff,#e3e8dc);color:#23302c;font-weight:800;line-height:1}
+.step button:disabled{opacity:.3;cursor:default}
+.step output{min-width:16px;text-align:center;font:700 13px var(--cz)}
+
+/* 品質の判 */
+.seal{flex:none;padding:2px 7px;border-radius:3px;font:800 10.5px/1.4 var(--mn);color:#fff;letter-spacing:.06em;box-shadow:0 1px 2px #0004}
+.g0{background:#8a8a8a}.g1{background:#8a6a44}.g2{background:#4a8a4a}.g3{background:#3a6aaa}.g4{background:linear-gradient(#e8c04a,#b08418);color:#3a2a08}.g5{background:linear-gradient(90deg,#c05ad0,#5a8ae0,#4ac0a0);}
+
+/* 鑑定書 */
+.cert{position:relative;margin-bottom:9px;padding:10px 12px 10px 14px;border-radius:4px;background:#fffdf6;border:1px solid #d9cfa8;box-shadow:0 2px 0 #c9b98a}
+.cert::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;background:var(--gc,#8aa89a)}
+.cert .top{display:flex;align-items:center;gap:8px}
+.cert .nm{flex:1;font:800 14px var(--mn)}
+.cert .pr{font:700 13px var(--cz);color:#7a5a1c}
+.cert .memo{margin-top:4px;font-size:11.5px;color:#4a5a54}
+.cert.gone{opacity:.5}
+
+/* 料金表（額縁） */
+.board{padding:14px 16px;border-radius:6px;background:linear-gradient(#24443e,#183430);color:#f3ecd4;border:3px solid #b8964a;box-shadow:inset 0 0 0 1px #f3dc9a55,0 4px 8px #0006}
+.board h4{margin:0 0 4px;font:800 14px var(--mn);color:var(--gh);letter-spacing:.14em}
+.board h4:not(:first-child){margin-top:12px}
+.board .ln{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px dashed #ffffff26;font:700 12.5px var(--mn)}
+.board .ln b{font-family:var(--cz);color:#fff}
+.board p{margin:10px 0 0;font-size:11.5px;color:#cfe0d6}
+
+/* 相談バー */
+.order{flex:none;margin:0 10px;padding:7px 10px;background:#f2eedf;color:#23302c;border:1px solid #c9b98a;border-top:2px dashed #8aa89a;font-size:12px}
+.order .pick{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#3c4a44}
+.order .act{display:flex;align-items:center;gap:6px;margin-top:5px}
+.order .tot{flex:1;font:800 13px var(--mn)}
+.order .tot b{font-family:var(--cz)}
+.btn{padding:9px 14px;border-radius:5px;border:1px solid #0b1614;background:linear-gradient(#3c7a6a,#24524a);color:#f7f3e6;font:800 12.5px/1 var(--mn);letter-spacing:.06em;box-shadow:0 3px 0 #0f2420,inset 0 1px 0 #ffffff44;transition:filter .15s}
+.btn:hover{filter:brightness(1.12)}.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #0f2420}
+.btn:disabled{filter:grayscale(.85) brightness(.85);cursor:default;transform:none}
+.btn.gold{background:linear-gradient(#d9b45a,#a07a24);color:#2a1e06;box-shadow:0 3px 0 #5a420e,inset 0 1px 0 #ffffff66}
+.btn.sub{background:linear-gradient(#2a4a44,#16302b);color:#e6ecd8}
+
+/* 会話欄 */
+.talk{position:relative;flex:none;display:flex;align-items:flex-end;gap:6px;margin:5px 10px 0;padding:6px;border-radius:6px;background:linear-gradient(#1f3b36,#132622);border:1px solid #2f5a52}
+.talk textarea{flex:1;min-width:0;height:36px;max-height:84px;padding:8px 10px;resize:none;border:1px solid #6a8a7e;border-radius:4px;background:#fbf8ef;color:#23302c;font:inherit;line-height:1.45;overflow-y:hidden}
+.talk textarea:focus{outline:2px solid #d9b45a88}
+.talk .btn{flex:none;padding:8px 14px}
+.tpl{flex:none;padding:8px 10px;border-radius:5px;border:1px solid #2f5a52;background:linear-gradient(#2a4a44,#16302b);color:#f3e6c0;font:700 12px/1 var(--mn);white-space:nowrap}
+.tpl.on{background:linear-gradient(#3c6a60,#24443e);color:#fff3cf}
+.chips{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:5;display:none;flex-wrap:wrap;gap:5px;padding:9px;border-radius:8px;background:#132622f2;border:1px solid #5a8a7e;box-shadow:0 6px 16px #000a}
+.chips.open{display:flex;animation:pop .2s ease-out}
+.chips button{flex:none;padding:4px 10px;border-radius:999px;border:1px solid #2f5a52;background:#16302b;color:#e6dcb8;font-size:11px}
+.chips button:hover{background:#24443e}
+.chips button.hi{border-color:#d9b45a;background:linear-gradient(#5a4a1c,#3a2e0e);color:#ffe9b0}
+.status{min-height:16px;margin:3px 10px 0;font-size:11px;color:#d9e6c8;text-align:center}
+</style>
+
+<div class="office" id="office">
+  <div class="title"><span>APPRAISAL</span><b>ミレアの鑑定所</b><span>&amp; TRADE</span><button class="exit" type="button" id="leave" data-label="店を出る">店を出る</button></div>
+  <div class="scene" id="scene">
+    <img class="bg" id="bgimg" alt="" onerror="this.remove()">
+    <div class="keeper" id="keeper"></div>
+    <div class="glint" id="glint"></div>
+    <div class="bubble" id="bubble"><small>ミレア</small><span id="say">いらっしゃいませ。鑑定をご希望ですね。</span></div>
+    <div class="purse"><span class="coin"></span><b id="gold">—</b><small>G</small></div>
+    <div class="err" id="err" hidden></div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button type="button" data-t="ap" class="on">鑑定</button>
+    <button type="button" data-t="cert">鑑定書</button>
+    <button type="button" data-t="sell">売る</button>
+    <button type="button" data-t="price">料金表</button>
+  </nav>
+  <main class="ledger" id="ledger">
+    <section class="pane on" data-p="ap">
+      <div class="h">鑑定に出す素材<span class="sub">種類ごとに選ぶ</span></div>
+      <div id="aplist"></div>
+      <p class="note">鑑定料は1品 100G〜（珍しい素材ほど上がります）。品質によって売値が変わります。</p>
+    </section>
+    <section class="pane" data-p="cert">
+      <div class="h">鑑定書<span class="sub" id="certcnt"></span></div>
+      <div id="certs"></div>
+    </section>
+    <section class="pane" data-p="sell">
+      <div class="h">買取に出す素材<span class="sub">数を選ぶ</span></div>
+      <div id="selllist"></div>
+      <p class="note">鑑定済みは鑑定額で、未鑑定はミレアの通常査定で買い取ります。</p>
+    </section>
+    <section class="pane" data-p="price">
+      <div class="board">
+        <h4>【鑑定】</h4>
+        <div class="ln"><span>素材・道具の鑑定</span><span><b>100</b> G〜 ／1品</span></div>
+        <h4>【品質と買取価格】</h4>
+        <div class="ln"><span><span class="seal g0">粗悪</span></span><span>通常価格 ×0.5</span></div>
+        <div class="ln"><span><span class="seal g1">並</span></span><span>×1</span></div>
+        <div class="ln"><span><span class="seal g2">良</span></span><span>×1.5</span></div>
+        <div class="ln"><span><span class="seal g3">上</span></span><span>×2</span></div>
+        <div class="ln"><span><span class="seal g4">極上</span></span><span>×3</span></div>
+        <div class="ln"><span><span class="seal g5">掘り出し物</span></span><span>ミレアの査定次第</span></div>
+        <p>※ 確認できた事実と推測を分けて、鑑定書に記載します。価値を断定できない品は、その旨をお伝えします。</p>
+      </div>
+    </section>
+  </main>
+  <div class="order" id="order">
+    <div class="pick" id="pick"></div>
+    <div class="act"><span class="tot" id="tot"></span><button class="btn sub" type="button" id="clr">取消</button><button class="btn gold" type="button" id="go">鑑定を頼む</button></div>
+  </div>
+  <div class="talk"><button class="tpl" type="button" id="tpl">定型文 ▾</button><textarea id="msg" rows="1" maxlength="500" placeholder="自由に話しかけよう（Enterで送信）"></textarea><button class="btn" type="button" id="send">送る</button>
+  <div class="chips" id="chips">
+    <button type="button" data-say="「ミレアさん、鑑定料はいくらですか？」">鑑定料は？</button>
+    <button type="button" data-say="「ミレアさん、この素材、もう少し高く買い取ってもらえませんか？」">値上げ交渉</button>
+    <button type="button" data-say="「ミレアさん、この素材はどこで使われることが多いんですか？」">用途を聞く</button>
+    <button type="button" data-say="「ミレアさん、何か困っていることや、頼みたいクエストはありませんか？」">クエストはある？</button>
+    <button type="button" class="hi" data-say="「ミレアさん、よかったら一緒にパーティを組んで、アビスに潜りませんか？」">パーティに誘う</button>
+    <button type="button" data-say="「ミレアさん、最近、珍しい品は持ち込まれましたか？」">噂話</button>
+    <button type="button" data-say="「ミレアさん、最近どうですか？」">世間話</button>
+    <button type="button" data-say="「みんな、鑑定してほしい物はない？」">仲間に声をかける</button>
+  </div></div>
+  <p class="status" id="status">相談ボタンは会話欄に文を入れます。「送る」で送信（クレジット消費）</p>
+</div>
+
+<script>
+/* ===== 設定 ===== */
+var STATE_VAR = 'abyss_state', CERT_VAR = 'appraisal';
+var IMG_BASE = 'https://tora0306.github.io/BD/3/';
+var BG = 'bg.png';
+var FACES = { normal: 'milea_normal.png', smile: 'milea_smile.png', think: 'milea_think.png', trouble: 'milea_trouble.png', surprise: 'milea_surprise.png', focus: 'milea_focus.png' };
+var GRADES = ['粗悪','並','良','上','極上','掘り出し物'];
+var LEAVE_TEXT = '鑑定所を出る。';
+var IDLE = [['いらっしゃいませ。鑑定をご希望ですね。','normal'],['外見だけでは判断できない品も多いんですよ。','think'],['珍しい品をお持ちでしたら、ぜひ拝見させてください。','smile'],['なるほど……今日も興味深い品が集まりそうですね。','smile']];
+/* ================ */
+var S = {}, CERTS = [], ap = new Set(), sell = new Map(), sending = false, prevGold, faceTimer, TAB = 'ap';
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function num(v){return typeof v==='number'&&isFinite(v)?v:(typeof v==='string'&&v.trim()!==''&&!isNaN(+v)?+v:NaN)}
+function fmt(n){return isFinite(n)?n.toLocaleString('ja-JP'):'—'}
+function nm(x){return x==null?'':typeof x==='object'?(x.name||x.id||''):String(x)}
+function arr(x){return Array.isArray(x)?x:null}
+function parse(raw){if(raw&&typeof raw==='object')return raw;if(typeof raw!=='string'||!raw.trim())return null;return JSON.parse(raw.trim().replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,''))}
+function gemColor(n){return /炎|火|竜|赤/.test(n)?'#e0603a':/氷|雪|水|青/.test(n)?'#5aa8e0':/雷|黄|金/.test(n)?'#e0c03a':/毒|森|緑|苔/.test(n)?'#6ab04a':/牙|骨|角|爪/.test(n)?'#e8dcc4':/鉄|鋼|鉱|石/.test(n)?'#8a929c':/核|晶|魔/.test(n)?'#a070e0':'#b08a5a'}
+function gradeIdx(g){var i=GRADES.indexOf(String(g||'').replace(/\s/g,''));return i<0?-1:i}
+function seal(g){var i=gradeIdx(g);return i<0?'':'<span class="seal g'+i+'">'+esc(GRADES[i])+'</span>'}
+function certOf(n){for(var i=0;i<CERTS.length;i++)if(nm(CERTS[i])===n)return CERTS[i];return null}
+
+/* 画像 */
+$('bgimg').src = IMG_BASE + BG;
+(function(){var k=$('keeper'),h='';Object.keys(FACES).forEach(function(f){h+='<img data-face="'+f+'" src="'+IMG_BASE+FACES[f]+'" alt="" class="'+(f==='normal'?'':'off')+'" onerror="this.remove()">'});k.innerHTML=h})();
+function face(f,hop){
+  document.querySelectorAll('#keeper img').forEach(function(i){i.classList.toggle('off',i.dataset.face!==f)});
+  if(!document.querySelector('#keeper img[data-face="'+f+'"]')){var n=document.querySelector('#keeper img[data-face="normal"]');if(n)n.classList.remove('off')}
+  if(hop){var k=$('keeper');k.classList.remove('hop');void k.offsetWidth;k.classList.add('hop')}
+}
+function say(t,f,back){
+  var b=$('bubble');$('say').textContent=t;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');
+  face(f||'normal',f==='smile');clearTimeout(faceTimer);
+  if(back)faceTimer=setTimeout(function(){face('normal')},back);
+}
+function glint(){var g=$('glint');g.classList.remove('on');void g.offsetWidth;g.classList.add('on')}
+
+/* タブ */
+var TAB_LINE={ap:['鑑定をご希望ですね。では、拝見する品を選んでください。','normal'],cert:['これまでの鑑定書です。確認できた事実と推測は分けて記載しています。','smile'],sell:['買取ですね。鑑定済みの品は、鑑定額でお引き取りします。','normal'],price:['料金はこちらです。根拠のない値付けはいたしませんので、ご安心ください。','smile']};
+var GO_LABEL={ap:'鑑定を頼む',sell:'買取を頼む'};
+document.querySelectorAll('#tabs button').forEach(function(b){b.onclick=function(){
+  TAB=b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(function(x){x.classList.toggle('on',x===b)});
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('on',p.dataset.p===TAB)});
+  $('ledger').scrollTop=0;var l=TAB_LINE[TAB];say(l[0],l[1]);draw();
+}});
+
+/* 描画 */
+function loot(){
+  var p=S.player||{},have={},order=[];
+  (arr(p.loot)||[]).concat((arr(p.items)||[]).filter(function(x){return x&&typeof x==='object'&&/採取/.test(String(x.description||''))})).forEach(function(x){var n=nm(x);if(!n)return;var q=num(x&&x.quantity);q=isFinite(q)?q:1;if(q<=0)return;if(!(n in have)){have[n]=0;order.push(n)}have[n]+=q});
+  return order.map(function(n){return {name:n,have:have[n]}});
+}
+function draw(){
+  var p=S.player||{},gold=num(p.gold);
+  $('gold').textContent=fmt(gold);
+  if(isFinite(prevGold)&&isFinite(gold)&&gold!==prevGold){var e=document.createElement('span');e.className='pop '+(gold<prevGold?'dn':'up');e.textContent=(gold>prevGold?'+':'')+fmt(gold-prevGold);document.querySelector('.purse').appendChild(e);setTimeout(function(){e.remove()},1300)}
+  prevGold=gold;
+  var L=loot(),haveOf={};L.forEach(function(m){haveOf[m.name]=m.have});
+  ap.forEach(function(n){if(!haveOf[n])ap.delete(n)});
+  sell.forEach(function(q,n){if(!haveOf[n]||!q)sell.delete(n);else if(q>haveOf[n])sell.set(n,haveOf[n])});
+
+  /* 鑑定 */
+  $('aplist').innerHTML=L.length?L.map(function(m){var c=certOf(m.name),on=ap.has(m.name);
+    return '<div class="row'+(on?' sel':'')+'" data-a="'+esc(m.name)+'" style="cursor:pointer"><span class="chk">'+(on?'✓':'')+'</span><span class="gem" style="--c:'+gemColor(m.name)+'"></span><span class="n">'+esc(m.name)+'<small>所持 '+m.have+'</small></span>'+(c?seal(c.grade)+'<span class="val"><small>鑑定済み</small></span>':'<span class="val"><small>未鑑定</small></span>')+'</div>'}).join(''):'<p class="muted">'+(arr(p.loot)||arr(p.items)?'鑑定に出せる素材がありません。':'素材の記録がまだありません。')+'</p>';
+
+  /* 鑑定書 */
+  $('certcnt').textContent=CERTS.length?CERTS.length+'件':'';
+  $('certs').innerHTML=CERTS.length?CERTS.map(function(c){var n=nm(c),i=gradeIdx(c.grade),u=num(c.unit),own=haveOf[n]||0;
+    return '<div class="cert'+(own?'':' gone')+'" style="--gc:'+(['#8a8a8a','#8a6a44','#4a8a4a','#3a6aaa','#d9a82a','#a05ad0'][i]||'#8aa89a')+'"><div class="top">'+seal(c.grade)+'<span class="nm">'+esc(n)+'</span><span class="pr">'+(isFinite(u)?fmt(u)+' G／個':'価値 未確定')+'</span></div>'+
+      (c.note?'<div class="memo">'+esc(c.note)+'</div>':'')+'<div class="memo">所持 '+own+'</div></div>'}).join(''):'<p class="muted">まだ鑑定書はありません。「鑑定」タブで素材を選んで、ミレアに頼んでみましょう。</p>';
+
+  /* 売る */
+  $('selllist').innerHTML=L.length?L.map(function(m){var c=certOf(m.name),u=c?num(c.unit):NaN,q=sell.get(m.name)||0;
+    return '<div class="row'+(q?' sel':'')+'"><span class="gem" style="--c:'+gemColor(m.name)+'"></span><span class="n">'+esc(m.name)+'<small>所持 '+m.have+'</small></span>'+(c?seal(c.grade):'')+
+      '<span class="val">'+(isFinite(u)?fmt(u)+' G<small>／個</small>':'<small>通常査定</small>')+'</span>'+
+      '<span class="step"><button type="button" data-s="'+esc(m.name)+'" data-d="-1"'+(q?'':' disabled')+'>−</button><output>'+q+'</output><button type="button" data-s="'+esc(m.name)+'" data-d="1"'+(q>=m.have?' disabled':'')+'>＋</button></span></div>'}).join(''):'<p class="muted">買取に出せる素材がありません。</p>';
+
+  /* 相談バー */
+  var showOrder=TAB==='ap'||TAB==='sell';$('order').hidden=!showOrder;
+  if(TAB==='ap'){var a=[];ap.forEach(function(n){a.push(n)});
+    $('pick').textContent=a.join('・');$('pick').hidden=!a.length;
+    $('tot').innerHTML=a.length?'鑑定料 <b>'+fmt(100*a.length)+'</b> G〜':'';
+    $('go').textContent=GO_LABEL.ap;$('go').disabled=sending||!a.length;$('clr').disabled=!a.length;
+  } else if(TAB==='sell'){var s=[],sum=0,unk=false;sell.forEach(function(q,n){if(!q)return;s.push(n+'×'+q);var c=certOf(n),u=c?num(c.unit):NaN;if(isFinite(u))sum+=u*q;else unk=true});
+    $('pick').textContent=s.join('・');$('pick').hidden=!s.length;
+    $('tot').innerHTML=s.length?'買取 <b>'+fmt(sum)+'</b> G'+(unk?'＋査定分':''):'';
+    $('go').textContent=GO_LABEL.sell;$('go').disabled=sending||!s.length;$('clr').disabled=!s.length;
+  }
+  $('leave').disabled=sending;$('send').disabled=sending;
+}
+
+document.addEventListener('click',function(e){
+  var a=e.target.closest('[data-a]');if(a){var n=a.dataset.a;if(ap.has(n))ap.delete(n);else{ap.add(n);var c=certOf(n);if(c)say('こちらは以前、鑑定済みですね。改めて拝見しましょうか？','think',3500);else{say(n+'ですね。少々、お待ちください。','focus',3500);glint()}}draw();return}
+  var s=e.target.closest('[data-s]');if(s){var m=s.dataset.s,d=+s.dataset.d;sell.set(m,Math.max(0,(sell.get(m)||0)+d));draw();if(d>0)say(certOf(m)?'鑑定額でお引き取りしますね。':'未鑑定の品ですね。通常の査定でよろしいですか？','normal',3000);return}
+});
+$('clr').onclick=function(){if(TAB==='ap')ap.clear();else sell.clear();draw();say('かしこまりました。ゆっくりお選びください。','normal')};
+$('go').onclick=function(){
+  if(TAB==='ap'){var a=[];ap.forEach(function(n){a.push(n)});if(!a.length)return;put('「ミレアさん、'+a.join('、')+'を鑑定してもらえますか？ 品質と、1個あたりの買取額を教えてください」',['では、拝見します。――アプレイズ。','focus']);glint()}
+  else{var s=[],unk=false;sell.forEach(function(q,n){if(!q)return;var c=certOf(n),u=c?num(c.unit):NaN;s.push(n+'を'+q+'個'+(isFinite(u)?'（鑑定額 '+u+'G／個）':''));if(!isFinite(u))unk=true});if(!s.length)return;
+    put('「ミレアさん、'+s.join('、')+'買い取ってもらえますか？'+(unk?' 未鑑定の分は査定をお願いします':'')+'」',['かしこまりました。根拠を確認させてください。','think'])}
+};
+
+/* 会話欄 */
+function put(text,line){var m=$('msg');m.value=text;grow();m.focus();m.setSelectionRange(m.value.length,m.value.length);$('status').textContent='書き換えてもOK。「送る」かEnterで送信します。';if(line)say(line[0],line[1],4000)}
+function talk(text){
+  text=String(text||'').trim();if(!text||sending)return;
+  if(typeof sendMessage!=='function'){$('status').textContent='本編チャットで送信できます：'+text;return}
+  sending=true;draw();$('status').textContent='送信中…';
+  Promise.resolve().then(function(){return sendMessage(text)}).then(function(){
+    if($('msg').value.trim()===text){$('msg').value='';grow()}ap.clear();sell.clear();$('status').textContent='チャットに送信しました。返事はチャット欄に届きます。'
+  },function(){$('status').textContent='送信できませんでした。もう一度お試しください。'}).then(function(){sending=false;draw()});
+}
+$('send').onclick=function(){talk($('msg').value)};
+$('msg').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();talk(this.value)}});
+function grow(){var m=$('msg');m.style.height='36px';m.style.height=Math.min(84,m.scrollHeight+2)+'px';m.style.overflowY=m.scrollHeight>84?'auto':'hidden'}
+$('msg').addEventListener('input',grow);
+function tpl(open){$('chips').classList.toggle('open',open);$('tpl').classList.toggle('on',open);$('tpl').textContent=open?'定型文 ▴':'定型文 ▾'}
+$('tpl').onclick=function(e){e.stopPropagation();tpl(!$('chips').classList.contains('open'))};
+document.addEventListener('click',function(e){if(!e.target.closest('#chips')&&!e.target.closest('#tpl'))tpl(false)});
+document.querySelectorAll('#chips button').forEach(function(b){b.onclick=function(){tpl(false);put(b.dataset.say)}});
+
+/* 退店（2回押し） */
+$('leave').onclick=function(){
+  var b=this;if(sending)return;
+  if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='もう一度';$('status').textContent='送信内容：'+LEAVE_TEXT;clearTimeout(b._t);b._t=setTimeout(function(){b.classList.remove('arm');b.textContent=b.dataset.label;$('status').textContent=''},8000);return}
+  clearTimeout(b._t);b.classList.remove('arm');b.textContent=b.dataset.label;
+  if(typeof sendMessage!=='function'){$('status').textContent='本編チャットで送信できます：'+LEAVE_TEXT;return}
+  sending=true;draw();$('status').textContent='送信中…';
+  Promise.resolve().then(function(){return sendMessage(LEAVE_TEXT)}).then(function(){$('status').textContent='チャットに送信しました。';say('ありがとうございました。珍しい品が見つかったら、また拝見させてくださいね。','smile',5000)},function(){$('status').textContent='送信できませんでした。もう一度お試しください。'}).then(function(){sending=false;draw()});
+};
+
+/* ===== StoryEngine から呼ばれる ===== */
+function read(sd,name){var v;try{v=sd.getValue(name);if(v===undefined)v=sd.getValue('var_'+name)}catch(e){var o=sd&&sd.getObject?sd.getObject():{};v=o[name]!==undefined?o[name]:o['var_'+name]}return v}
+function onUpdateData(statusData){
+  var bad=false;
+  try{var c=parse(read(statusData,CERT_VAR));CERTS=c?(arr(c.items)||arr(c)||[]):[]}catch(e){bad=true}
+  try{var st=parse(read(statusData,STATE_VAR));S=st||{}}catch(e){bad=true}
+  $('err').hidden=!bad;if(bad)$('err').textContent='記録の一部を読み込めませんでした。前回の表示を維持しています。';
+  draw();
+}
+draw();
+setInterval(function(){if(document.activeElement===$('msg')||$('msg').value||document.querySelector('.arm')||ap.size||sell.size)return;var l=IDLE[Math.floor(Math.random()*IDLE.length)];say(l[0],l[1])},14000);
+</script>
