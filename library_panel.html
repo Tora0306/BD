@@ -1,0 +1,463 @@
+<!--
+  フリーヤの知識の館 v1 — StoryEngine ステータスビュー（上級モード）用 / 知識の館ストーリーノード専用
+  変数 abyss_state（JSON文字列）を読みます。推奨サイズ 500 × 1000
+  画像は GitHub Pages（https://tora0306.github.io/BD/4/ と /BD/fx/）から読み込みます。
+  合成・強化・付与・習得の相談は会話欄に文を入れるだけ。「送る」で送信（クレジット消費）。退店ボタンは2回押し。
+-->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Shippori+Mincho+B1:wght@600;800&display=swap">
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#140e1c}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+.hall{--gd:#d9b45a;--gh:#f3dc9a;--ink:#f1ecf6;--mn:'Shippori Mincho B1','Yu Mincho',serif;--cz:Cinzel,Georgia,serif;
+  height:100vh;display:flex;flex-direction:column;padding-bottom:8px;color:var(--ink);font:13px/1.5 'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;
+  background:radial-gradient(120% 60% at 50% 0,#3a2452,transparent 70%),repeating-linear-gradient(45deg,#ffffff04 0 2px,transparent 2px 18px),linear-gradient(#22162e,#120c1a)}
+
+.title{position:relative;flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:34px;margin:8px 10px 0;border-radius:5px 5px 0 0;
+  background:linear-gradient(#5a3a7a,#33204a);border:2px solid #120c1a;border-bottom:0;box-shadow:inset 0 1px 0 #a888c8,inset 0 0 0 1px #d9b45a55}
+.title b{font:800 16px/1 var(--mn);letter-spacing:.22em;color:#fbf3dc;text-shadow:0 2px 0 #120c1a,0 0 10px #c08aff88}
+.title span{font:700 8.5px/1 var(--cz);letter-spacing:.3em;color:var(--gh)}
+.title .exit{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:4px;border:1px solid #120c1a;background:linear-gradient(#4a3062,#2a1a3a);color:#f3e6c0;font:700 11px/1 var(--mn)}
+.title .exit:hover{filter:brightness(1.2)}
+.title .exit.arm{background:linear-gradient(#e0b44a,#a8781c);color:#fff}
+
+.scene{position:relative;flex:none;margin:0 10px;aspect-ratio:3/2;overflow:hidden;border:2px solid #120c1a;border-radius:0 0 5px 5px;box-shadow:0 6px 14px #000c;background:linear-gradient(#a890c8 0 55%,#c8b8dc 55%)}
+.scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scene::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 100% at 50% 40%,transparent 60%,#0006)}
+.keeper{position:absolute;left:65.5%;top:6.5%;width:22.5%;aspect-ratio:4/5;z-index:1;animation:breath 3.6s ease-in-out infinite;transform-origin:50% 100%}
+.keeper img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .18s}
+.keeper img.off{opacity:0}
+.keeper.hop{animation:hop .35s ease-out,breath 3.6s ease-in-out .35s infinite}
+@keyframes breath{50%{transform:translateY(-1.5px)}}
+@keyframes hop{40%{transform:translateY(-6px)}}
+.circle{position:absolute;left:63.5%;top:27%;width:28%;aspect-ratio:1;z-index:2;pointer-events:none;transform:scaleY(.34);opacity:0;transition:opacity .4s;
+  background:url(https://tora0306.github.io/BD/fx/library_circle.png) 0 0/1600% 100% no-repeat;image-rendering:pixelated;mix-blend-mode:screen}
+.circle.on{opacity:1;animation:fxloop 1.3s steps(16,jump-none) infinite}
+@keyframes fxloop{to{background-position:100% 0}}
+.sparkle{position:absolute;z-index:3;width:9px;height:9px;pointer-events:none;background:radial-gradient(circle,#fff 0 20%,transparent 60%);animation:twinkle 1.1s ease-out forwards}
+.sparkle::before,.sparkle::after{content:"";position:absolute;left:50%;top:50%;width:2px;height:16px;margin:-8px 0 0 -1px;background:linear-gradient(transparent,#fff6d0,transparent)}
+.sparkle::after{transform:rotate(90deg)}
+@keyframes twinkle{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-14px) scale(.6)}}
+.bubble{position:absolute;left:17%;top:7%;width:43%;z-index:2;padding:9px 12px 10px;border-radius:12px;background:#fbf6ff;color:#2a1e36;
+  font:700 12.5px/1.6 var(--mn);box-shadow:0 3px 0 #b8a8cc,0 6px 12px #0007;border:2px solid #5a3a7a}
+.bubble::after{content:"";position:absolute;right:-13px;top:42%;border:9px solid transparent;border-left:13px solid #5a3a7a;border-right:0}
+.bubble::before{content:"";position:absolute;right:-9px;top:calc(42% + 2px);border:7px solid transparent;border-left:10px solid #fbf6ff;border-right:0;z-index:1}
+.bubble small{display:block;margin-bottom:3px;font:800 10px/1 var(--mn);letter-spacing:.18em;color:#8a4ac0}
+.bubble.pop{animation:pop .3s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(4px) scale(.96)}}
+.purse{position:absolute;left:3%;bottom:4%;z-index:2;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:6px;background:linear-gradient(#3a2a4a,#20152c);border:2px solid #120c1a;box-shadow:inset 0 0 0 1px #d9b45a55,0 4px 10px #000a}
+.coin{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2b8,#e0b04a 45%,#8a6420);box-shadow:0 0 0 2px #5a3f14,0 0 8px #f0b45a88}
+.purse b{font:700 19px/1 var(--cz);color:#ffe0a6;text-shadow:0 0 10px #f0b45a66;font-variant-numeric:tabular-nums}
+.purse small{font:700 11px/1 var(--cz);color:#f0b45a}
+.purse .rk{margin-left:4px;padding:2px 6px;border-radius:3px;background:#5a3a7a;color:#fff;font:700 11px/1.3 var(--cz)}
+.purse .pop{position:absolute;left:40px;top:-16px;font:700 13px/1 var(--cz);text-shadow:0 1px 3px #000;animation:rise 1.2s ease-out forwards}
+.purse .pop.dn{color:#ff9b8e}.purse .pop.up{color:#9ff0b0}
+@keyframes rise{0%{opacity:0;transform:translateY(4px)}15%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+.err{position:absolute;left:3%;right:3%;top:3%;z-index:4;padding:5px 8px;font-size:11px;color:#ffd0c0;background:#7a2a1acc;border-radius:4px}
+
+.tabs{flex:none;display:flex;gap:3px;margin:9px 10px 0}
+.tabs button{flex:1;padding:8px 0 7px;border:1px solid #5a3a7a;border-bottom:0;border-radius:6px 6px 0 0;background:linear-gradient(#33204a,#20152c);color:#c8b4dc;font:700 12px/1 var(--mn);letter-spacing:.04em}
+.tabs button.on{background:linear-gradient(#fbf6ff,#ece2f6);color:#2a1e36;border-color:#c9b98a;box-shadow:0 -2px 10px #c08aff44}
+
+.ledger{flex:1;min-height:0;overflow:auto;margin:0 10px;padding:10px 12px;border:1px solid #c9b98a;border-radius:0 0 4px 4px;color:#2a1e36;
+  background:repeating-linear-gradient(#0000 0 25px,#8a4ac014 25px 26px),radial-gradient(120% 80% at 50% 0,#fdfaff,#eee4f4);box-shadow:inset 0 0 18px #5a3a7a33;scrollbar-width:thin;scrollbar-color:#a890c8 transparent}
+.pane{display:none}.pane.on{display:block;animation:pop .25s ease-out}
+.h{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:800 13px/1 var(--mn);letter-spacing:.14em;color:#5a3a7a}
+.h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#a890c8,transparent)}
+.h .sub{order:2;font:600 10.5px/1 var(--mn);letter-spacing:.04em;color:#8a7a9a}
+.muted{font-size:12px;color:#8a7a94}
+.note{margin:8px 0 0;font-size:11.5px;color:#6a5a74}
+
+.row{display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px dashed #a890c888;cursor:pointer}
+.row.sel{background:#c08aff22}
+.row.dis{opacity:.45;cursor:default}
+.row .n{flex:1;min-width:0;font:800 12.5px/1.3 var(--mn)}
+.row .n small{display:block;font:400 10.5px/1.35 sans-serif;color:#6a5a74}
+.row .val{flex:none;font:700 11.5px/1.3 var(--cz);color:#7a5a1c;text-align:right}
+.row .val small{display:block;font:400 10px sans-serif;color:#8a8a7a}
+.chk{flex:none;width:20px;height:20px;border-radius:4px;border:2px solid #8a7a9a;background:#fff;display:grid;place-items:center;font:800 12px/1 sans-serif;color:#5a3a7a}
+.row.sel .chk{background:#5a3a7a;color:#fff;border-color:#5a3a7a}
+.el{flex:none;min-width:22px;padding:1px 4px;border-radius:3px;font:800 10px/1.5 sans-serif;color:#fff;text-align:center;background:#8a7a9a}
+.el.火{background:#d0502a}.el.氷{background:#4a9ad0}.el.雷{background:#a88410}.el.風{background:#3aa070}.el.土{background:#8a6a3a}.el.水{background:#2a6ac0}.el.光{background:#b8943a}.el.闇{background:#5a3a8a}.el.無{background:#7a7a8a}.el.回{background:#d0608a}
+
+.chips2{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px}
+.chips2 button{padding:3px 9px;border-radius:999px;border:1px solid #a890c8;background:#fff;color:#4a3a5a;font:700 11px/1.4 sans-serif}
+.chips2 button.on{background:#5a3a7a;color:#fff;border-color:#5a3a7a}
+.chips2 button:disabled{opacity:.35;cursor:default}
+
+.preview{margin:10px 0 0;padding:10px 12px;border-radius:6px;background:linear-gradient(#2a1a3a,#1a1028);color:#f1ecf6;border:2px solid #b8964a;box-shadow:inset 0 0 0 1px #f3dc9a44}
+.preview .pn{display:flex;align-items:center;gap:6px;font:800 14px var(--mn);color:#fff3cf}
+.preview .pn input{flex:1;min-width:0;padding:4px 8px;border-radius:4px;border:1px solid #8a6aaa;background:#fbf6ff;color:#2a1e36;font:800 13px var(--mn)}
+.preview .pn button{flex:none;padding:3px 8px;border-radius:4px;border:1px solid #8a6aaa;background:#3a2a4a;color:#f3e6c0;font:700 11px/1.3 sans-serif}
+.preview dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:8px 0 0;font-size:12px}
+.preview dt{color:#c8b4dc}.preview dd{margin:0;font:700 12px var(--cz);color:#fff}
+.preview dd small{font:400 10.5px sans-serif;color:#c8b4dc}
+.preview .warn{margin-top:6px;font-size:11.5px;color:#ffb8a8}
+
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl td{padding:6px 4px;border-bottom:1px dashed #a890c888;vertical-align:middle}
+.tbl tr{cursor:pointer}.tbl tr.sel{background:#c08aff22}.tbl tr.dis{opacity:.42;cursor:default}
+.tbl .nm{font:800 12.5px/1.3 var(--mn)}
+.tbl .nm small{display:block;font:400 10.5px/1.3 sans-serif;color:#6a5a74}
+.tbl .pr{text-align:right;font:700 11.5px var(--cz);color:#7a5a1c;white-space:nowrap}
+.tier{display:inline-block;padding:0 5px;border-radius:3px;font:800 10px/1.6 sans-serif;color:#fff}
+.tier.t0{background:#6a9a6a}.tier.t1{background:#4a6ab0}.tier.t2{background:#a04ac0}
+
+.board{padding:14px 16px;border-radius:6px;background:linear-gradient(#3a2452,#22162e);color:#f3ecd4;border:3px solid #b8964a;box-shadow:inset 0 0 0 1px #f3dc9a55,0 4px 8px #0006}
+.board .say{margin:0 0 10px;padding:8px 10px;border-radius:6px;background:#fbf6ff;color:#2a1e36;font:800 12.5px/1.6 var(--mn)}
+.board h4{margin:0 0 4px;font:800 14px var(--mn);color:var(--gh);letter-spacing:.14em}
+.board h4:not(:first-of-type){margin-top:12px}
+.board .ln{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;border-bottom:1px dashed #ffffff26;font:700 12.5px var(--mn)}
+.board .ln b{font-family:var(--cz);color:#fff;white-space:nowrap}
+.board p{margin:10px 0 0;font-size:11.5px;color:#e0d4ec}
+
+.order{flex:none;margin:0 10px;padding:7px 10px;background:#f4eefa;color:#2a1e36;border:1px solid #c9b98a;border-top:2px dashed #a890c8;font-size:12px}
+.order .pick{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#4a3a5a}
+.order .act{display:flex;align-items:center;gap:6px;margin-top:5px}
+.order .tot{flex:1;font:800 13px var(--mn)}
+.order .tot b{font-family:var(--cz)}
+.btn{padding:9px 14px;border-radius:5px;border:1px solid #120c1a;background:linear-gradient(#7a4aa8,#4a2a70);color:#f7f3e6;font:800 12.5px/1 var(--mn);letter-spacing:.06em;box-shadow:0 3px 0 #22142e,inset 0 1px 0 #ffffff44}
+.btn:hover{filter:brightness(1.12)}.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #22142e}
+.btn:disabled{filter:grayscale(.85) brightness(.85);cursor:default;transform:none}
+.btn.gold{background:linear-gradient(#d9b45a,#a07a24);color:#2a1e06;box-shadow:0 3px 0 #5a420e,inset 0 1px 0 #ffffff66}
+.btn.sub{background:linear-gradient(#4a3062,#2a1a3a);color:#e6dcf0}
+
+.talk{position:relative;flex:none;display:flex;align-items:flex-end;gap:6px;margin:5px 10px 0;padding:6px;border-radius:6px;background:linear-gradient(#33204a,#20152c);border:1px solid #5a3a7a}
+.talk textarea{flex:1;min-width:0;height:36px;max-height:84px;padding:8px 10px;resize:none;border:1px solid #8a7a9a;border-radius:4px;background:#fbf6ff;color:#2a1e36;font:inherit;line-height:1.45;overflow-y:hidden}
+.talk textarea:focus{outline:2px solid #d9b45a88}
+.talk .btn{flex:none;padding:8px 14px}
+.tpl{flex:none;padding:8px 10px;border-radius:5px;border:1px solid #5a3a7a;background:linear-gradient(#4a3062,#2a1a3a);color:#f3e6c0;font:700 12px/1 var(--mn);white-space:nowrap}
+.tpl.on{background:linear-gradient(#6a4a8a,#3a2a4a);color:#fff3cf}
+.chips{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:5;display:none;flex-wrap:wrap;gap:5px;padding:9px;border-radius:8px;background:#20152cf2;border:1px solid #8a6aaa;box-shadow:0 6px 16px #000a}
+.chips.open{display:flex;animation:pop .2s ease-out}
+.chips button{flex:none;padding:4px 10px;border-radius:999px;border:1px solid #5a3a7a;background:#2a1a3a;color:#e6dcb8;font-size:11px}
+.chips button:hover{background:#4a3062}
+.chips button.hi{border-color:#d9b45a;background:linear-gradient(#5a4a1c,#3a2e0e);color:#ffe9b0}
+.status{min-height:16px;margin:3px 10px 0;font-size:11px;color:#e0d4ec;text-align:center}
+</style>
+
+<div class="hall" id="hall">
+  <div class="title"><span>ARCANA</span><b>知識の館</b><span>LIBRARY</span><button class="exit" type="button" id="leave" data-label="館を出る">館を出る</button></div>
+  <div class="scene" id="scene">
+    <img class="bg" id="bgimg" alt="" onerror="this.remove()">
+    <div class="keeper" id="keeper"></div>
+    <div class="circle" id="circle"></div>
+    <div class="bubble" id="bubble"><small>フリーヤ</small><span id="say">あれれ〜？ お客さん？ えへへ、いらっしゃい♡</span></div>
+    <div class="purse"><span class="coin"></span><b id="gold">—</b><small>G</small><span class="rk" id="rank" hidden></span></div>
+    <div class="err" id="err" hidden></div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button type="button" data-t="syn" class="on">合成</button>
+    <button type="button" data-t="up">強化</button>
+    <button type="button" data-t="enc">付与</button>
+    <button type="button" data-t="learn">習得</button>
+    <button type="button" data-t="price">料金表</button>
+  </nav>
+  <main class="ledger" id="ledger">
+    <section class="pane on" data-p="syn">
+      <div class="h">合成する技<span class="sub">2つ選ぶ</span></div>
+      <div id="synlist"></div>
+      <div id="synprev"></div>
+    </section>
+    <section class="pane" data-p="up">
+      <div class="h">強化する技<span class="sub">＋1ごとに威力＋20・上限＋3</span></div>
+      <div id="uplist"></div>
+      <div id="upprev"></div>
+    </section>
+    <section class="pane" data-p="enc">
+      <div class="h">追加効果を付ける技<span class="sub">1つの技に1つまで</span></div>
+      <div id="enclist"></div>
+      <div id="encprev"></div>
+    </section>
+    <section class="pane" data-p="learn">
+      <div class="h">魔導書の棚<span class="sub" id="learnsub"></span></div>
+      <div class="chips2" id="elf"></div>
+      <div class="chips2" id="tif"></div>
+      <table class="tbl" id="booktbl"></table>
+      <p class="note">魔法職はぜんぶ覚えられます。それ以外の職は初級と回復・補助だけ（判断はフリーヤ）。</p>
+    </section>
+    <section class="pane" data-p="price">
+      <div class="board" id="board"></div>
+    </section>
+  </main>
+  <div class="order" id="order">
+    <div class="pick" id="pick"></div>
+    <div class="act"><span class="tot" id="tot"></span><button class="btn sub" type="button" id="clr">取消</button><button class="btn gold" type="button" id="go">頼む</button></div>
+  </div>
+  <div class="talk"><button class="tpl" type="button" id="tpl">定型文 ▾</button><textarea id="msg" rows="1" maxlength="500" placeholder="自由に話しかけよう（Enterで送信）"></textarea><button class="btn" type="button" id="send">送る</button>
+  <div class="chips" id="chips">
+    <button type="button" data-say="「フリーヤ、料金はいくら？」">料金は？</button>
+    <button type="button" data-say="「フリーヤ、今のあたしにおすすめの魔法ってある？」">おすすめは？</button>
+    <button type="button" data-say="「フリーヤ、もうちょっと安くならない？」">値切る</button>
+    <button type="button" data-say="「フリーヤ、この技、どうやったらもっと強くなる？」">技の相談</button>
+    <button type="button" data-say="「フリーヤ、何か困ってることや、頼みたいクエストはない？」">クエストはある？</button>
+    <button type="button" class="hi" data-say="「フリーヤ、よかったら一緒にパーティを組んで、アビスに潜らない？」">パーティに誘う</button>
+    <button type="button" data-say="「フリーヤ、お菓子持ってきたよ。一緒に食べない？」">お菓子をあげる</button>
+    <button type="button" data-say="「フリーヤ、最近どう？」">世間話</button>
+    <button type="button" data-say="「みんな、知識の館で何か覚えたい魔法はある？」">仲間に声をかける</button>
+  </div></div>
+  <p class="status" id="status">相談ボタンは会話欄に文を入れます。「送る」で送信（クレジット消費）</p>
+</div>
+
+<script>
+/* ===== 設定 ===== */
+var STATE_VAR = 'abyss_state';
+var IMG_BASE = 'https://tora0306.github.io/BD/4/';
+var FACES = { normal:'friya_normal.png', smile:'friya_smile.png', smug:'friya_smug.png', think:'friya_think.png', surprise:'friya_surprise.png', shy:'friya_shy.png',
+  affection:'friya_affection.png', serious:'friya_serious.png', suspicious:'friya_suspicious.png', worried:'friya_worried.png', sad:'friya_sad.png', angry:'friya_angry.png' };
+var LEAVE_TEXT = '知識の館を出る。';
+var RANKS = 'EDCBAS';
+var FEE = { synSame:800, synDiff:1200, up:[500,1000,1800], book:[1000,2500,5000] };
+var UP_MAX = 3, UP_STEP = 20, UP_RANK = ['E','E','C'];
+var ENCH = [
+  ['炎上','炎上（毎ターン10・2ターン）',['火'],1000],
+  ['凍え','対象の次の攻撃−20',['氷','水'],1000],
+  ['痺れ','対象の次の攻撃−30（ボスは−15）',['雷'],1200],
+  ['切り裂き','対象が次に受けるダメージ＋20',['風'],1000],
+  ['吸収','与ダメージがあれば自分のHP＋30',['闇'],1500],
+  ['浄化','状態異常を1つ治す',['光','回'],1200],
+  ['気合','使った後、自分の次の攻撃＋20',['物理'],1000],
+  ['魔力還元','この技で敵を倒すとMP＋10',['*'],1500]
+];
+/* 魔導書：型ごとの数値 [初級,中級,上級] = [MP,威力] */
+var TYPE = { 単:[[15,70],[15,80],[15,90]], 連:[[15,70],[15,80],[15,90]], 効:[[15,60],[15,70],[15,80]], 双:[[20,55],[20,65],[20,70]],
+  強:[[25,100],[25,110],[25,125]], 拘:[null,[20,45],[20,55]], 全:[null,[30,90],[30,100]], 吸:[null,[25,85],[25,100]] };
+var TYPE_LABEL = { 単:'単体', 連:'連撃（合計）', 効:'単体＋効果', 双:'2体', 強:'単体・強', 拘:'拘束', 全:'敵全体', 吸:'単体＋吸収' };
+var EFX = { 炎上:'炎上10×2', 凍え:'次の攻撃−20', 痺れ:'次の攻撃−30', 切り裂き:'被ダメ＋20' };
+var BOOKS = {
+  火:[['ファイアボール','単'],['ブレイズショット','連'],['イグナイト','効','炎上'],null,['フレイムランス','強'],['ヒートサークル','全'],['ブレイズワルツ','双'],null,['ヴォルカニックノヴァ','強'],['インフェルノゲート','全'],['クリムゾンレイン','双']],
+  氷:[['アイスニードル','単'],['スノウダート','連'],['フロストピラー','効','凍え'],null,['グレイシャルランス','強'],['フリーズブルーム','全'],['ダイヤモンドダスト','双'],null,['ニヴルヘイム','強'],['アブソリュートゼロ','全'],['シルバーコフィン','拘']],
+  雷:[['スパーク','単'],['ヴォルトダンス','連'],['ボルトネット','効','痺れ'],null,['サンダーボルト','強'],['サンダーサークル','全'],['チェインライトニング','双'],null,['ヘヴンズボルト','強'],['ライトニングストーム','全'],['ミョルニルストライク','拘']],
+  風:[['ウィンドカッター','単'],['ソニックエッジ','連'],['エアバースト','双'],null,['ゲイルブレード','強'],['サイクロン','全'],['ウィンドリッパー','効','切り裂き'],null,['エアリアルノヴァ','強'],['テンペスト','全'],['スカイリーパー','双']],
+  土:[['ストーンバレット','単'],['サンドストーム','双'],['クレイバインド','効','凍え'],null,['ロックブラスト','強'],['グランドファング','全'],['アースバインド','拘'],null,['メテオフォール','強'],['アースクエイク','全'],['ガイアプレス','拘']],
+  水:[['アクアショット','単'],['スプラッシュ','双'],['バブルスネア','効','凍え'],null,['ウォーターランス','強'],['メイルシュトローム','全'],['ミストヴェール','双'],null,['アビサルランス','強'],['タイダルウェイブ','全'],['リヴァイアサンロア','双']],
+  光:[['ライトアロー','単'],['ルミナ','連'],['フラッシュレイ','効','凍え'],null,['ホーリーランス','強'],['ヘイローリング','全'],['プリズムレイ','双'],null,['ジャッジメント','強'],['セレスティアルレイン','全'],['セイクリッドブレイド','双']],
+  闇:[['シャドウボール','単'],['ナイトファング','連'],['シャドウスティッチ','効','凍え'],null,['シャドウスピア','強'],['ダークソーン','全'],['ソウルイーター','吸'],null,['エクリプス','強'],['ナイトメア','全'],['ヴォイドプリズン','拘']],
+  無:[['マナボルト','単'],['マジックミサイル','連'],null,['アーケインバースト','全'],['ミスティックレイン','双'],null,['スターダストエンド','強'],['アストラルノヴァ','全']]
+};
+var SUPPORT = [
+  [0,'ヒール','味方1人 HP＋60',8],[0,'ヒーリングドロップ','味方1人 毎ターンHP＋20・3ターン',10],[0,'キュア','状態異常を1つ治す',6],[0,'ルーメン','暗い階層で1層分の視界を確保',5],[0,'マナリーフ','味方1人にMP10を渡す（自分は15減る）',15],
+  [1,'ハイヒール','味方1人 HP＋160',18],[1,'ヒーリングレイン','味方全員 HP＋50',22],[1,'ガーディアンシール','味方1人 その戦闘中 被ダメージ−20％',15],[1,'ブレイブハート','味方1人 その戦闘中 与ダメージ＋20％',15],[1,'インサイト','敵1体の弱点属性を1つ知る',12],[1,'ピュリファイ','味方全員の状態異常を1つずつ治す',20],
+  [2,'メガヒール','味方1人 HP＋340',35],[2,'サンクチュアリ','味方全員 その戦闘中 被ダメージ−10％',40],[2,'リザレクション','戦闘不能の味方1人を最大HPの半分で復活',50],[2,'リターンゲート','全員でレムリアへ帰還（戦闘中不可）',40]
+];
+var TIER_NAME = ['初級','中級','上級'], TIER_RANK = ['E','C','B'];
+var IDLE = [['ふふーん、今日はなに覚えにきたの？','smug'],['あれれ〜？ そんなとこで迷ってるの？ えへへ','smile'],['……この術式、あと一行で読めそう。','think'],['ねえねえ、お菓子持ってない？','affection']];
+/* ================ */
+var S={},sending=false,prevGold,faceTimer,TAB='syn',syn=[],swap=false,synName='',upSel='',encSel='',encFx='',learn=new Set(),EL='all',TI=-1,prevSig=null,WORKING=false;
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function num(v){if(typeof v==='number'&&isFinite(v))return v;if(typeof v==='string'){var m=v.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-65248)}).match(/-?\d+(\.\d+)?/);if(m)return +m[0]}return NaN}
+function r5(x){return Math.floor(x/5+0.5)*5}
+function fmt(n){return isFinite(n)?n.toLocaleString('ja-JP'):'—'}
+function nm(x){return x==null?'':typeof x==='object'?(x.name||x.id||''):String(x)}
+function arr(x){return Array.isArray(x)?x:null}
+function parse(raw){if(raw&&typeof raw==='object')return raw;if(typeof raw!=='string'||!raw.trim())return null;return JSON.parse(raw.trim().replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,''))}
+function rankIdx(r){var c=String(r||'').trim().charAt(0).toUpperCase();var i=RANKS.indexOf(c);return i}
+function plusOf(n){var m=String(n).match(/[＋+]\s*([0-9０-９])\s*$/);return m?num(m[1]):0}
+function baseName(n){return String(n).replace(/\s*[＋+]\s*[0-9０-９]\s*$/,'')}
+
+/* 属性の判定（説明の「属性：」→名前の手がかり） */
+var NOELEM=/マナボルト|マジックミサイル|アーケイン|ミスティック|アストラル|スターダスト/;
+var ELRX=[['火',/火|炎|焔|ファイア|フレイム|ブレイズ|バーン|インフェルノ|イグナイト|ヴォルカ|クリムゾン|ヒート|エクスプロージョン/],['氷',/氷|凍|アイス|フロスト|ブリザ|グレイシ|フリーズ|スノウ|ダイヤモンド|ニヴル|アブソリュート|コフィン/],
+  ['雷',/雷|電|サンダー|ボルト|スパーク|ライトニング|ヴォルト|ミョルニル/],['風',/風|ウィンド|サイクロン|ゲイル|テンペスト|ソニック|エア|スカイ|トルネード/],
+  ['土',/土|岩|地|ストーン|ロック|アース|ガイア|メテオ|サンド|クレイ|グランド/],['水',/水|アクア|ウォーター|タイダル|スプラッシュ|バブル|メイル|ミスト|リヴァイア|アビサル/],
+  ['光',/光|聖|ホーリー|ライト(?!ニング)|ルミナ|ジャッジ|セレスティ|セイクリッド|プリズム|ヘイロー|フラッシュ/],['闇',/闇|影|ダーク|シャドウ|ナイト|ソウル|エクリプス|ヴォイド|ドレイン/],
+  ['回',/回復|ヒール|キュア|癒|リザレク|ピュリファイ/]];
+function elemsOf(d,n){
+  var src=String((d&&(d.element||d.attribute))||''),out=[];
+  var m=String((d&&d.description)||'').match(/属性[:：]\s*([^\s。、,]+)/);if(!src&&m)src=m[1];
+  if(!src&&NOELEM.test(n))return ['無'];
+  var hay=src||n;ELRX.forEach(function(e){if(e[1].test(hay)&&out.indexOf(e[0])<0)out.push(e[0])});
+  if(!out.length&&/物理|斬|剣|拳|突|打|蹴|矢|弓|槍/.test(String((d&&d.description)||'')+n))out.push('物理');
+  return out;
+}
+var SCOPE_RANK={none:0,self:0,ally:0,enemy:1,any:1,allAllies:3,allEnemies:3};
+function scopeOf(d){var s=d&&d.targetScope;var r=s in SCOPE_RANK?SCOPE_RANK[s]:1;if(/2体/.test(String((d&&d.description)||''))&&r<2)r=2;return r}
+var SCOPE_TXT=['—','単体','2体','全体'];
+
+/* 所持スキル */
+function skills(){
+  var p=S.player||{},det=arr(p.skillDetails)||[],list=[],seen={};
+  function find(n){for(var i=0;i<det.length;i++)if(nm(det[i])===n)return det[i];var b=baseName(n);for(i=0;i<det.length;i++)if(baseName(nm(det[i]))===b)return det[i];return null}
+  (arr(p.skills)||[]).map(nm).concat(det.map(nm)).forEach(function(n){if(!n||seen[n])return;seen[n]=1;var d=find(n)||{};
+    list.push({name:n,d:d,dmg:num(d.damage),mp:num(d.mp),el:elemsOf(d,n),scope:scopeOf(d),ult:d.ultimate===true,plus:plusOf(n),heal:/回復|HP\s*[＋+]/.test(String(d.description||''))&&!isFinite(num(d.damage))})});
+  return list;
+}
+function sk(n){var L=skills();for(var i=0;i<L.length;i++)if(L[i].name===n)return L[i];return null}
+
+/* 画像 */
+$('bgimg').src=IMG_BASE+'bg.png';
+(function(){var k=$('keeper'),h='';Object.keys(FACES).forEach(function(f){h+='<img data-face="'+f+'" src="'+IMG_BASE+FACES[f]+'" alt="" class="'+(f==='normal'?'':'off')+'" onerror="this.remove()">'});k.innerHTML=h})();
+function face(f,hop){
+  document.querySelectorAll('#keeper img').forEach(function(i){i.classList.toggle('off',i.dataset.face!==f)});
+  if(!document.querySelector('#keeper img[data-face="'+f+'"]')){var n=document.querySelector('#keeper img[data-face="normal"]');if(n)n.classList.remove('off')}
+  if(hop){var k=$('keeper');k.classList.remove('hop');void k.offsetWidth;k.classList.add('hop')}
+}
+function say(t,f,back){var b=$('bubble');$('say').textContent=t;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');face(f||'normal',f==='smug'||f==='smile');clearTimeout(faceTimer);if(back)faceTimer=setTimeout(function(){face('normal')},back)}
+function magic(ms){var c=$('circle');c.classList.add('on');clearTimeout(magic.t);magic.t=setTimeout(function(){c.classList.remove('on')},ms||2600);
+  for(var i=0;i<9;i++)(function(i){setTimeout(function(){var s=document.createElement('i');s.className='sparkle';s.style.left=(66+Math.random()*22)+'%';s.style.top=(18+Math.random()*30)+'%';$('scene').appendChild(s);setTimeout(function(){s.remove()},1200)},i*160)})(i)}
+
+/* タブ */
+var TAB_LINE={syn:['合成？ ふふーん、2つ選んでみなよ。どんな技になるかな〜','smug'],up:['強化ね。＋1ごとに威力＋20、＋3までだよ〜','smile'],enc:['追加効果？ 属性に合うやつしか付かないからね','think'],learn:['魔導書の棚だよ〜。ランク足りないのは売らないからね？','smug'],price:['じゃーん！ これがあたしの料金表だよ〜。ちゃんと読んでね？ ざーこ♡','smug']};
+document.querySelectorAll('#tabs button').forEach(function(b){b.onclick=function(){TAB=b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(function(x){x.classList.toggle('on',x===b)});
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('on',p.dataset.p===TAB)});
+  $('ledger').scrollTop=0;var l=TAB_LINE[TAB];say(l[0],l[1]);draw()}});
+
+function elTags(el){return el.length?el.map(function(e){return '<span class="el '+e+'">'+(e==='回'?'回復':e)+'</span>'}).join(''):'<span class="el">?</span>'}
+function skRow(s,attr,selected,dis,valHtml){
+  var sub=[isFinite(s.mp)?'MP'+s.mp:'MP?',isFinite(s.dmg)?'威力'+s.dmg:(s.heal?'回復':'威力?'),SCOPE_TXT[s.scope]].join('・')+(s.ult?'・必殺技':'');
+  return '<div class="row'+(selected?' sel':'')+(dis?' dis':'')+'" '+attr+'="'+esc(s.name)+'"><span class="chk">'+(selected?'✓':'')+'</span>'+elTags(s.el)+'<span class="n">'+esc(s.name)+'<small>'+esc(sub)+'</small></span>'+(valHtml||'')+'</div>';
+}
+var SUFFIX=['ボルト','ボール','ランス','カッター','ストーム','ショット','アロー','ニードル','バレット','スピア','ブレード','ウェイブ','サークル','ブラスト','クエイク','ダスト','エッジ','ダンス','ネット','ファング','ソーン','ノヴァ','レイン','レイ','ストライク','ピラー','ゲート','ミサイル','バースト','スラッシュ','ブレス','フォール','プレス'];
+function head(n){n=baseName(n);for(var i=0;i<SUFFIX.length;i++){var s=SUFFIX[i];if(n.length>s.length+1&&n.slice(-s.length)===s)return n.slice(0,-s.length)}return n}
+function synCalc(){
+  if(syn.length!==2)return null;var a=sk(syn[0]),b=sk(syn[1]);if(!a||!b)return null;if(swap){var t=a;a=b;b=t}
+  var el=a.el.slice();b.el.forEach(function(e){if(el.indexOf(e)<0)el.push(e)});
+  var same=a.el.length&&b.el.length&&a.el.join()===b.el.join();
+  var known=isFinite(a.dmg)&&isFinite(b.dmg)&&isFinite(a.mp)&&isFinite(b.mp);
+  return {a:a,b:b,name:head(a.name)+baseName(b.name),el:el,dmg:known?r5(Math.max(a.dmg,b.dmg)*1.3):NaN,mp:known?r5((a.mp+b.mp)*0.7):NaN,scope:Math.max(a.scope,b.scope),fee:same?FEE.synSame:FEE.synDiff,same:same,known:known,ult:a.ult||b.ult};
+}
+function encOk(s,e){if(e[2][0]==='*')return true;return s.el.some(function(x){return e[2].indexOf(x)>=0})||(e[2][0]==='物理'&&!s.el.filter(function(x){return x!=='物理'}).length)}
+
+function draw(){
+  var p=S.player||{},gold=num(p.gold),rk=rankIdx(p.rank);
+  $('gold').textContent=fmt(gold);$('rank').hidden=!p.rank;$('rank').textContent=p.rank||'';
+  if(isFinite(prevGold)&&isFinite(gold)&&gold!==prevGold){var e=document.createElement('span');e.className='pop '+(gold<prevGold?'dn':'up');e.textContent=(gold>prevGold?'+':'')+fmt(gold-prevGold);document.querySelector('.purse').appendChild(e);setTimeout(function(){e.remove()},1300)}
+  prevGold=gold;
+  var L=skills(),names=L.map(function(s){return s.name});
+  syn=syn.filter(function(n){return names.indexOf(n)>=0});if(names.indexOf(upSel)<0)upSel='';if(names.indexOf(encSel)<0){encSel='';encFx=''}
+  var none='<p class="muted">'+(arr(p.skills)||arr(p.skillDetails)?'技がありません。':'技の記録がまだありません。')+'</p>';
+
+  /* 合成 */
+  $('synlist').innerHTML=L.length?L.map(function(s){return skRow(s,'data-s',syn.indexOf(s.name)>=0,s.ult)}).join(''):none;
+  var c=synCalc();
+  if(c){if(!synName||synName.__k!==syn.join('|')+swap){synName=new String(c.name);synName.__k=syn.join('|')+swap}
+    $('synprev').innerHTML='<div class="preview"><div class="pn"><input id="synname" maxlength="30" value="'+esc(String(synName))+'"><button type="button" id="swap" title="順番を入れ替える">⇄</button></div><dl>'+
+      '<dt>属性</dt><dd>'+elTags(c.el)+'</dd><dt>威力</dt><dd>'+(isFinite(c.dmg)?c.dmg+' <small>（強い方×1.3）</small>':'<small>数値が未確定</small>')+'</dd>'+
+      '<dt>消費MP</dt><dd>'+(isFinite(c.mp)?c.mp+' <small>（合計×0.7）</small>':'—')+'</dd><dt>範囲</dt><dd>'+SCOPE_TXT[c.scope]+'</dd><dt>追加効果</dt><dd><small>どちらか1つを引き継ぐ</small></dd>'+
+      '<dt>合成料</dt><dd>'+fmt(c.fee)+'G <small>（'+(c.same?'同じ属性':'違う属性')+'）</small></dd></dl>'+
+      (c.ult?'<div class="warn">必殺技は材料にできません。</div>':'')+(!c.known?'<div class="warn">威力かMPが分からない技は、先に数値を決めないと合成できません。</div>':'')+'<div class="note" style="color:#c8b4dc">元の技は残ります。名前は書き換えてOK。</div></div>';
+    $('synname').oninput=function(){synName=new String(this.value);synName.__k=syn.join('|')+swap;drawOrder()};
+    $('swap').onclick=function(){swap=!swap;synName='';draw()};
+  } else $('synprev').innerHTML=syn.length===1?'<p class="note">もう1つ選んでね。</p>':'';
+
+  /* 強化 */
+  $('uplist').innerHTML=L.length?L.map(function(s){var mx=s.plus>=UP_MAX;return skRow(s,'data-u',upSel===s.name,mx||s.ult,'<span class="val">'+(mx?'<small>上限</small>':'＋'+s.plus+'→＋'+(s.plus+1))+'</span>')}).join(''):none;
+  var u=upSel&&sk(upSel);
+  if(u){var nx=u.plus+1,need=UP_RANK[u.plus],ok=rk<0||rk>=RANKS.indexOf(need);
+    $('upprev').innerHTML='<div class="preview"><div class="pn">'+esc(baseName(u.name))+'＋'+nx+'</div><dl><dt>'+(u.heal?'回復量':'威力')+'</dt><dd>'+(isFinite(u.dmg)?u.dmg+' → '+(u.dmg+UP_STEP):'＋'+UP_STEP)+'</dd><dt>消費MP</dt><dd>'+(isFinite(u.mp)?u.mp+' <small>（変わらない）</small>':'—')+'</dd><dt>強化料</dt><dd>'+fmt(FEE.up[u.plus])+'G</dd><dt>必要ランク</dt><dd>'+need+'〜</dd></dl>'+
+      (ok?'':'<div class="warn">ランクが足りません（'+need+'から）。</div>')+(u.ult?'<div class="warn">必殺技は強化できません。</div>':'')+'</div>';
+  } else $('upprev').innerHTML='';
+
+  /* 付与 */
+  $('enclist').innerHTML=L.length?L.map(function(s){return skRow(s,'data-e',encSel===s.name,s.ult)}).join(''):none;
+  var en=encSel&&sk(encSel);
+  if(en){var chips=ENCH.map(function(e){var ok=encOk(en,e);return '<button type="button" data-fx="'+e[0]+'"'+(ok?'':' disabled')+(encFx===e[0]?' class="on"':'')+'>'+e[0]+'</button>'}).join('');
+    var ef=ENCH.filter(function(e){return e[0]===encFx})[0];
+    $('encprev').innerHTML='<div class="preview"><div class="pn">'+esc(en.name)+(ef?' ＋ '+ef[0]:'')+'</div><div class="chips2" style="margin-top:8px">'+chips+'</div>'+
+      (ef?'<dl><dt>効果</dt><dd><small style="color:#fff">'+esc(ef[1])+'</small></dd><dt>付与料</dt><dd>'+fmt(ef[3])+'G</dd></dl>':'<div class="note" style="color:#c8b4dc">付ける効果を選んでね。属性に合わないものは選べません。</div>')+
+      (/炎上|凍え|痺れ|切り裂き|吸収|浄化|気合|魔力還元|拘束|弱体|回復/.test(String(en.d.description||''))?'<div class="warn">もともと効果がある技は、付けると入れ替わります。</div>':'')+'</div>';
+  } else $('encprev').innerHTML='';
+
+  drawBooks(names,rk);drawOrder();
+  $('leave').disabled=sending;$('send').disabled=sending;
+}
+function bookList(){var out=[];Object.keys(BOOKS).forEach(function(el){var t=0;BOOKS[el].forEach(function(b){if(b===null){t++;return}var st=TYPE[b[1]][t];out.push({el:el,tier:t,name:b[0],type:b[1],fx:b[2],mp:st[0],dmg:st[1]})})});
+  SUPPORT.forEach(function(s){out.push({el:'回',tier:s[0],name:s[1],type:'補',desc:s[2],mp:s[3]})});return out}
+var BOOKALL=bookList();
+function bookDesc(b){if(b.type==='補')return b.desc;var t=TYPE_LABEL[b.type];var d=b.type==='双'?b.dmg+'×2体':b.dmg;
+  var x=b.type==='効'?'・'+EFX[b.fx]:b.type==='拘'?'・拘束'+(b.tier===2?2:1)+'ターン':b.type==='吸'?'・HP＋30':'';return t+'・威力'+d+x}
+function drawBooks(names,rk){
+  var els=['all','火','氷','雷','風','土','水','光','闇','無','回'];
+  $('elf').innerHTML=els.map(function(e){return '<button type="button" data-el="'+e+'"'+(EL===e?' class="on"':'')+'>'+(e==='all'?'すべて':e==='回'?'回復・補助':e)+'</button>'}).join('');
+  $('tif').innerHTML=[-1,0,1,2].map(function(t){return '<button type="button" data-ti="'+t+'"'+(TI===t?' class="on"':'')+'>'+(t<0?'全段階':TIER_NAME[t]+'（'+TIER_RANK[t]+'〜）')+'</button>'}).join('');
+  var rows=BOOKALL.filter(function(b){return(EL==='all'||b.el===EL)&&(TI<0||b.tier===TI)});
+  $('learnsub').textContent=rows.length+'冊';
+  $('booktbl').innerHTML=rows.map(function(b){var own=names.some(function(n){return baseName(n)===b.name}),lock=rk>=0&&rk<RANKS.indexOf(TIER_RANK[b.tier]),on=learn.has(b.name);
+    return '<tr data-b="'+esc(b.name)+'" class="'+(on?'sel':'')+(own||lock?' dis':'')+'"><td><span class="el '+b.el+'">'+(b.el==='回'?'回復':b.el)+'</span></td><td class="nm">'+esc(b.name)+' <span class="tier t'+b.tier+'">'+TIER_NAME[b.tier]+'</span><small>MP'+b.mp+'・'+esc(bookDesc(b))+'</small></td><td class="pr">'+(own?'<small>習得済み</small>':lock?'<small>'+TIER_RANK[b.tier]+'から</small>':fmt(FEE.book[b.tier])+'G')+'</td></tr>'}).join('');
+}
+function drawOrder(){
+  var show=TAB!=='price',pick='',tot='',can=false;
+  if(TAB==='syn'){var c=synCalc();if(c){pick=c.a.name+' ＋ '+c.b.name+' → '+String(synName||c.name);tot='合成料 <b>'+fmt(c.fee)+'</b> G';can=c.known&&!c.ult}else if(syn.length)pick=syn.join('・')}
+  else if(TAB==='up'){var u=upSel&&sk(upSel);if(u){pick=baseName(u.name)+'＋'+u.plus+' → ＋'+(u.plus+1);tot='強化料 <b>'+fmt(FEE.up[u.plus])+'</b> G';var rk=rankIdx((S.player||{}).rank);can=!u.ult&&u.plus<UP_MAX&&(rk<0||rk>=RANKS.indexOf(UP_RANK[u.plus]))}}
+  else if(TAB==='enc'){var ef=ENCH.filter(function(e){return e[0]===encFx})[0];if(encSel){pick=encSel+(ef?' ＋ '+ef[0]:'');if(ef){tot='付与料 <b>'+fmt(ef[3])+'</b> G';can=true}}}
+  else if(TAB==='learn'){var a=[],sum=0;learn.forEach(function(n){var b=BOOKALL.filter(function(x){return x.name===n})[0];if(b){a.push(n);sum+=FEE.book[b.tier]}});pick=a.join('・');if(a.length){tot='合計 <b>'+fmt(sum)+'</b> G';can=true}}
+  $('order').hidden=!show;$('pick').textContent=pick;$('pick').hidden=!pick;$('tot').innerHTML=tot;
+  $('go').textContent={syn:'合成を頼む',up:'強化を頼む',enc:'付与を頼む',learn:'魔導書を買う'}[TAB]||'頼む';
+  $('go').disabled=sending||!can;$('clr').disabled=!pick;
+}
+function board(){
+  var h='<div class="say">じゃーん！ これがあたしの料金表だよ〜。払えないなら……ざーこ♡</div>';
+  h+='<h4>【スキル合成】</h4><div class="ln"><span>同じ属性の技2つ</span><b>'+fmt(FEE.synSame)+' G</b></div><div class="ln"><span>違う属性の技2つ</span><b>'+fmt(FEE.synDiff)+' G</b></div>';
+  h+='<p>威力は強い方×1.3、消費MPは2つの合計×0.7（5きざみ）。属性は両方、範囲は広い方。元の技は残るよ。必殺技は材料にできないからね。</p>';
+  h+='<h4>【スキル強化】</h4>'+FEE.up.map(function(f,i){return '<div class="ln"><span>＋'+(i+1)+'（威力＋'+(UP_STEP*(i+1))+'）'+(UP_RANK[i]!=='E'?'　'+UP_RANK[i]+'〜':'')+'</span><b>'+fmt(f)+' G</b></div>'}).join('');
+  h+='<h4>【追加効果の付与】</h4>'+ENCH.map(function(e){return '<div class="ln"><span>'+e[0]+'（'+(e[2][0]==='*'?'どの技でも':e[2].join('・').replace('回','回復'))+'）</span><b>'+fmt(e[3])+' G</b></div>'}).join('');
+  h+='<h4>【魔法習得】</h4>'+[0,1,2].map(function(t){return '<div class="ln"><span>'+TIER_NAME[t]+'魔導書（'+TIER_RANK[t]+'〜）</span><b>'+fmt(FEE.book[t])+' G</b></div>'}).join('');
+  h+='<p>※ 数値が決まってない技はいじれないよ〜。先にちゃんと決めてきてね？</p>';
+  $('board').innerHTML=h;
+}
+
+document.addEventListener('click',function(e){
+  var t;
+  if((t=e.target.closest('[data-s]'))&&!t.classList.contains('dis')){var n=t.dataset.s,i=syn.indexOf(n);if(i>=0)syn.splice(i,1);else{if(syn.length>=2)syn.shift();syn.push(n)}synName='';swap=false;draw();
+    if(syn.length===2){var c=synCalc();if(c)say(c.known?'ふふーん、'+c.a.name+'と'+c.b.name+'ね〜。混ぜたら……'+String(synName||c.name)+'！ どう？':'あれれ〜？ 数値が分かんない技は混ぜられないよ？','smug',5000)}return}
+  if(t=e.target.closest('[data-s].dis')){say('必殺技は材料にできないよ〜。もったいないでしょ？','suspicious',3500);return}
+  if((t=e.target.closest('[data-u]'))&&!t.classList.contains('dis')){upSel=upSel===t.dataset.u?'':t.dataset.u;draw();if(upSel)say(baseName(upSel)+'を鍛えるの？ えへへ、いいよ〜','smile',3500);return}
+  if((t=e.target.closest('[data-e]'))&&!t.classList.contains('dis')){encSel=encSel===t.dataset.e?'':t.dataset.e;encFx='';draw();return}
+  if((t=e.target.closest('[data-fx]'))&&!t.disabled){encFx=encFx===t.dataset.fx?'':t.dataset.fx;draw();if(encFx)say(encFx+'ね〜。似合うと思うよ、ふふーん','smug',3500);return}
+  if(t=e.target.closest('[data-el]')){EL=t.dataset.el;draw();return}
+  if(t=e.target.closest('[data-ti]')){TI=+t.dataset.ti;draw();return}
+  if((t=e.target.closest('[data-b]'))&&!t.classList.contains('dis')){var b=t.dataset.b;if(learn.has(b))learn.delete(b);else learn.add(b);draw();if(learn.has(b))say(b+'？ ふーん、悪くないじゃん','smile',3000);return}
+  if(t=e.target.closest('[data-b].dis')){say('それはまだ早いよ〜。ランク上げてからおいで？','smug',3500);return}
+});
+$('clr').onclick=function(){if(TAB==='syn'){syn=[];synName=''}else if(TAB==='up')upSel='';else if(TAB==='enc'){encSel='';encFx=''}else if(TAB==='learn')learn.clear();draw();say('えー、やめちゃうの？ ……まあいいけど','worried',3000)};
+$('go').onclick=function(){
+  if(TAB==='syn'){var c=synCalc();if(!c)return;put('「フリーヤ、'+c.a.name+'と'+c.b.name+'を合成してほしいな。名前は『'+String(synName||c.name).trim()+'』で！」',['ふふーん、任せて。……ちょっと静かにしててね','serious'])}
+  else if(TAB==='up'){var u=sk(upSel);if(!u)return;put('「フリーヤ、'+baseName(u.name)+'を強化して＋'+(u.plus+1)+'にしてほしいな」',['はいはい、鍛えてあげる〜','smile'])}
+  else if(TAB==='enc'){if(!encSel||!encFx)return;put('「フリーヤ、'+encSel+'に『'+encFx+'』の効果を付けてほしいな」',['りょーかい。術式、ちょっといじるね','think'])}
+  else if(TAB==='learn'){var a=[];learn.forEach(function(n){a.push(n)});if(!a.length)return;put('「フリーヤ、'+a.join('、')+'の魔導書がほしいな。覚えられる？」',['ふふーん、教えてあげてもいいよ？','smug'])}
+};
+
+/* 会話欄 */
+function put(text,line){var m=$('msg');m.value=text;grow();m.focus();m.setSelectionRange(m.value.length,m.value.length);$('status').textContent='書き換えてもOK。「送る」かEnterで送信します。';if(line)say(line[0],line[1],4000)}
+function talk(text){
+  text=String(text||'').trim();if(!text||sending)return;
+  if(typeof sendMessage!=='function'){$('status').textContent='本編チャットで送信できます：'+text;return}
+  sending=true;draw();$('status').textContent='送信中…';
+  if(/合成|強化|効果を付け|魔導書/.test(text))magic(4000);
+  Promise.resolve().then(function(){return sendMessage(text)}).then(function(){
+    if($('msg').value.trim()===text){$('msg').value='';grow()}$('status').textContent='チャットに送信しました。返事はチャット欄に届きます。'
+  },function(){$('status').textContent='送信できませんでした。もう一度お試しください。';face('worried')}).then(function(){sending=false;draw()});
+}
+$('send').onclick=function(){talk($('msg').value)};
+$('msg').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();talk(this.value)}});
+function grow(){var m=$('msg');m.style.height='36px';m.style.height=Math.min(84,m.scrollHeight+2)+'px';m.style.overflowY=m.scrollHeight>84?'auto':'hidden'}
+$('msg').addEventListener('input',grow);
+function tpl(open){$('chips').classList.toggle('open',open);$('tpl').classList.toggle('on',open);$('tpl').textContent=open?'定型文 ▴':'定型文 ▾'}
+$('tpl').onclick=function(e){e.stopPropagation();tpl(!$('chips').classList.contains('open'))};
+document.addEventListener('click',function(e){if(!e.target.closest('#chips')&&!e.target.closest('#tpl'))tpl(false)});
+document.querySelectorAll('#chips button').forEach(function(b){b.onclick=function(){tpl(false);put(b.dataset.say)}});
+
+/* 退館（2回押し） */
+$('leave').onclick=function(){
+  var b=this;if(sending)return;
+  if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='もう一度';$('status').textContent='送信内容：'+LEAVE_TEXT;clearTimeout(b._t);b._t=setTimeout(function(){b.classList.remove('arm');b.textContent=b.dataset.label;$('status').textContent=''},8000);return}
+  clearTimeout(b._t);b.classList.remove('arm');b.textContent=b.dataset.label;
+  if(typeof sendMessage!=='function'){$('status').textContent='本編チャットで送信できます：'+LEAVE_TEXT;return}
+  sending=true;draw();$('status').textContent='送信中…';
+  Promise.resolve().then(function(){return sendMessage(LEAVE_TEXT)}).then(function(){$('status').textContent='チャットに送信しました。';say('えー、もう帰っちゃうの？ ……また来なよ。待ってないけど！','shy',5000)},function(){$('status').textContent='送信できませんでした。もう一度お試しください。'}).then(function(){sending=false;draw()});
+};
+
+/* ===== StoryEngine から呼ばれる ===== */
+function read(sd,name){var v;try{v=sd.getValue(name);if(v===undefined)v=sd.getValue('var_'+name)}catch(e){var o=sd&&sd.getObject?sd.getObject():{};v=o[name]!==undefined?o[name]:o['var_'+name]}return v}
+function onUpdateData(statusData){
+  try{var st=parse(read(statusData,STATE_VAR));S=st||{};$('err').hidden=true}catch(e){$('err').hidden=false;$('err').textContent='記録の一部を読み込めませんでした。前回の表示を維持しています。'}
+  var sig=skills().map(function(s){return s.name+'|'+s.dmg+'|'+String(s.d.description||'').length});
+  if(prevSig){var added=sig.filter(function(x){return prevSig.indexOf(x)<0});if(added.length){var n=added[0].split('|')[0];magic(2600);setTimeout(function(){say('ふふーん、完成〜！ 「'+n+'」、大事に使いなよ？','smug',6000)},400)}}
+  prevSig=sig;draw();
+}
+board();draw();
+setInterval(function(){if(document.activeElement===$('msg')||$('msg').value||document.querySelector('.arm')||syn.length||upSel||encSel||learn.size)return;var l=IDLE[Math.floor(Math.random()*IDLE.length)];say(l[0],l[1])},15000);
+</script>
