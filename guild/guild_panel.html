@@ -1,8 +1,8 @@
 <!--
   冒険者ギルド v1 — StoryEngine ステータスビュー（上級モード）用 / ギルドシーン専用
-  変数 abyss_state（JSON文字列）、guild_quests（JSON文字列）、stay_count（数値）を読みます。推奨サイズ 500 × 1000
+  変数 abyss_state・guild_quests・game_clock（いずれもJSON文字列）を読みます。推奨サイズ 500 × 1000
   画像は GitHub Pages（https://tora0306.github.io/BD/6/）から読み込みます。
-  掲示板は端末の日付＋宿泊回数で日替わり。夜（18時〜5時）は夜の依頼が出ます。
+  掲示板はゲーム内の日付（game_clock.day）で日替わり。時間帯が「夜」のときは夜の依頼が出ます。
   依頼を受ける・報告するボタンは会話欄に文を入れるだけ。「送る」で送信（クレジット消費）。退店ボタンは2回押し。
 -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Shippori+Mincho+B1:wght@600;800&display=swap">
@@ -180,7 +180,7 @@ table.tb{width:100%;border-collapse:collapse;font-size:11.5px}
     <section class="pane on" data-p="board">
       <div class="h">今日の依頼<span class="sub" id="day"></span></div>
       <div id="normal"></div>
-      <div class="h">夜の依頼<span class="sub">18時〜5時だけ</span></div>
+      <div class="h">夜の依頼<span class="sub">時間帯が夜のときだけ</span></div>
       <div id="nightq"></div>
       <p class="note">依頼を押すと詳しい内容が出ます。「受ける」で会話欄に申し込みの文が入ります。</p>
     </section>
@@ -219,7 +219,7 @@ table.tb{width:100%;border-collapse:collapse;font-size:11.5px}
 
 <script>
 /* ===== 設定 ===== */
-var STATE_VAR='abyss_state', QUEST_VAR='guild_quests', STAY_VAR='stay_count';
+var STATE_VAR='abyss_state', QUEST_VAR='guild_quests', CLOCK_VAR='game_clock';
 var IMG_BASE='https://tora0306.github.io/BD/6/';
 var FACES=['normal','smile','wink','proud','surprise','awawa','serious','worry','troubled','blush','pout','sad','moved','sleepy','affection','angry','think',
   'point1','point2','write1','write2','write3','hand1','hand2','read1','read2','stamp1','stamp2','pay1','pay2','magic1','magic2','magic3','caution','clap1','clap2','paper'];
@@ -283,47 +283,49 @@ var NIGHT=[
  ['大縦穴の異音調査','調査',40,'夜になると縦穴の底から、何かを叩く音が響くそうです。','ギルドの調査課','……正直、あまり行ってほしくないです。でも、あなたなら',2],
  ['月下のスノーウルフ討伐','討伐',36,'満月の夜にだけ群れを作るスノーウルフを討伐してください。','山林の猟師','寒いですから、あったかくしていってくださいね！',1]
 ];
-/* 個人依頼：名前, 種目, 階層, 題, 内容, 難易度, リーナ, 救助なら依頼者 */
+/* 個人依頼：名前, 種目, 階層, 題, 内容, 難易度, リーナ, 救助なら依頼者, 出やすさ（1が標準）
+   その人の目的・好きなことにつながる「寄り道」の依頼。目的そのものは達成しない。 */
 var PERSONAL=[
- ['アストリア','調査',43,'星宮への道を拓く','天墜の星宮をめざすため、灰燼峡谷を抜ける道を探したい。',3,'アストリアさんの依頼です。星宮……いつか本当にたどり着くんでしょうね'],
- ['ルヴェリア','討伐',39,'亡霊騎士の鎮め','廃都に巣くうレイスナイトたちを、剣で鎮めたい。腕の立つ同行者を求む。',2,'ルヴェリアさんの依頼です。ちょっと近寄りがたいですけど……悪い人じゃないですよ！'],
- ['イグニス','討伐',32,'温泉のマグマスライム掃討','熾火の山麓の温泉に、マグマスライムが入り込んで困っている。一緒に片づけてほしい。',1,'イグニスさんの依頼ですよ。温泉が目当て……じゃないですよね？ ふふっ'],
- ['ヴァルネ','調査',33,'動く密林の地図作り','呑み込む密林の地形が、また変わったらしい。風を読みながら新しい道を記録したい。',1,'ヴァルネさんから依頼が出ていますよ。密林は迷いやすいので、はぐれないでくださいね'],
- ['イリーナス','調査',40,'大縦穴の魔力測定','帰らずの大縦穴の魔力の流れを測りたい。護衛を兼ねた同行者を募集。',3,'イリーナスさんの依頼です。賢者さまのお供なんて、すごいですよ！'],
- ['ルクレシア','調査',38,'父の剣を探しに','父が最期を迎えた場所に、遺された剣を探しに行く。',2,'ルクレシアさんの依頼です。38層までの同行者を探しているみたいで……場所が場所なので、気をつけてくださいね'],
- ['ライゼナ','討伐',34,'ボルトイールとの雷比べ','雷鳴湿原の沼でボルトイールが暴れている。雷には雷で勝負したい。',1,'ライゼナさんの依頼です。……雷比べって、何なんでしょう？'],
- ['フィオル','採集',36,'霜樹の樹液集め','霜樹の山林で、凍った樹液を集めたい。手伝ってくれる人を探している。',1,'フィオルさんから依頼が出ていますよ。寒いところですから、厚着していってくださいね'],
- ['シルヴィー','調査',25,'剣のふるさとへ','自分の剣が見つかった氷晶の霊廟を、もう一度調べたい。',1,'シルヴィーさんの依頼です。剣のことで、何か気になることがあるみたいです'],
- ['セリカ','救助',31,'行方不明ハンターの捜索','C級ハンターのセリカさんが、3日前から千景の盆地から戻っていません。',2,'セリカさん、無事だといいんですけど……。見つけたら、そのまま一緒に帰ってきてくださいね','ギルド（緊急）'],
- ['ウサリア','調査',37,'歌う結晶の音を探して','「伝説の楽曲」の手がかりになる、特別な音で響く結晶を見つけたい。',1,'ウサリアさんから依頼が出ていますよ。結晶の音を一緒に探してくれる人を募集中だそうです♪'],
- ['リーシャ','討伐',39,'影の魔物の始末','廃都の闇に潜むシャドウストーカーを、気づかれる前に仕留めたい。静かに動ける同行者を求む。',2,'リーシャさんの依頼です。足音、立てないようにしてくださいね……？'],
- ['ハク','討伐',31,'ロックハウンドの群れ退治','千景の盆地のロックハウンドの群れを叩く。ヘイには内緒で腕試しがしたい。',1,'ハクさんの依頼です。ヘイさんには内緒……なんだそうです。ふふっ'],
- ['ヘイ','討伐',36,'フロストベア狩り','霜樹の山林の大熊を狩る。ハクより先に仕留めたい。',2,'ヘイさんの依頼です。……ハクさんと何か張り合ってるみたいですね'],
+ ['アストリア','調査',43,'星宮への道の下見','いずれ天墜の星宮をめざすため、灰燼峡谷の様子を下見して地図を作りたい。',3,'アストリアさんの依頼です。王女さまの下見のお供……ちょっと緊張しますね！'],
+ ['ルヴェリア','調査',39,'魔剣が震える方角','魔剣シグマが、ときどき黄昏の廃都の方を向いて震える。何があるのか確かめたい。',2,'ルヴェリアさんの依頼です。剣が勝手に……？ ちょっと怖いですね'],
+ ['イグニス','討伐',32,'温泉のマグマスライム掃討','お気に入りの熾火の山麓の温泉に、マグマスライムが入り込んだ。湯に浸かれないから片づけたい。',1,'イグニスさんの依頼ですよ。温泉が目当て……じゃないですよね？ ふふっ'],
+ ['ヴァルネ','調査',35,'静かな風の高台探し','天穹群島で、風がよく通る静かな高台を探したい。ついでに風の流れを記録する。',1,'ヴァルネさんから依頼が出ていますよ。……一人で落ち着ける場所を探してるみたいです'],
+ ['イリーナス','調査',26,'へんてこ魔法の見物','逆さ水鏡の洞に、水面にだけ逆さに映る魔法陣があるらしい。役には立たないけど面白そうだから見に行きたい。急がないよ。（イリーナスは手を出しすぎず、のんびり見ていることが多い）',0,'イリーナスさんの依頼です。……急ぎじゃないので、いつでもいいそうです。のんびりですね～','',0.3],
+ ['ルクレシア','調査',36,'父の冒険話の大樹','子どもの頃に父から聞いた冒険話に出てくる、霜樹の山林の「氷の大樹」を見に行きたい。',1,'ルクレシアさんの依頼です。お父さんのお話に出てくる場所なんですって'],
+ ['ライゼナ','討伐',34,'ボルトイールとの腕比べ','雷鳴湿原の沼でボルトイールが暴れている。雷には雷で、どっちが上か勝負したい。',1,'ライゼナさんの依頼です。……腕比べって、相手は魔物ですよ？'],
+ ['フィオル','採集',36,'紅茶に合う霜樹の蜜','霜樹の山林の凍った樹液は、紅茶に入れると上品な甘さになるそうですわ。少し集めたいの。',1,'フィオルさんから依頼が出ていますよ。紅茶のため……だそうです。ふふっ'],
+ ['シルヴィー','討伐',30,'古城の鎧騎士で腕試し','沈黙の古城のサイレントアーマーと戦って腕を磨きたい。連携の練習にも付き合ってほしい。',2,'シルヴィーさんの依頼です。面白そうな依頼には目がないんですよね～'],
+ ['セリカ','救助',31,'行方不明ハンターの捜索','大型モンスターを追って千景の盆地に入ったC級ハンターのセリカさんが、3日前から戻っていません。',2,'セリカさん、無事だといいんですけど……。見つけたら、そのまま一緒に帰ってきてくださいね','ギルド（緊急）'],
+ ['ウサリア','調査',37,'歌う結晶の音を探して','伝説の楽曲につながるかもしれない、変わった音で響く結晶の音を聞いてみたい。',1,'ウサリアさんから依頼が出ていますよ。結晶の音を一緒に探してくれる人を募集中だそうです♪'],
+ ['リーシャ','調査',39,'廃都の劇場跡','黄昏の廃都の古い劇場跡に、昔の踊りと武術が描かれた壁画が残っているらしい。見に行きたい。',2,'リーシャさんの依頼です。踊りの研究、なんだそうですよ'],
+ ['ハク','討伐',31,'ロックハウンドの群れ退治','千景の盆地のロックハウンドの群れを叩く。終わったらみんなで騒ぎたい。',1,'ハクさんの依頼です。打ち上げまでが依頼……だそうです。ふふっ'],
+ ['ヘイ','採集',36,'ハクのための香草摘み','ハクの好きな串焼きに使う香草を、霜樹の山林で摘みたい。静かな場所がいい。',1,'ヘイさんの依頼です。……ハクさんには内緒、だそうです'],
  ['ファリナ','採集',38,'黒鉄鉱の採掘','魔装の手入れに使う黒鉄鉱が足りないのです。断崖の採掘場まで付き合ってほしいのです。',1,'ファリナさんの依頼ですよ。重い鉱石なので、力持ちさん大歓迎だそうです！'],
- ['ヴェルミナ','討伐',35,'ストームハーピーの撃ち落とし','天穹群島のハーピーを砲撃で落とす。そのあいだの守りを任せたい。',2,'ヴェルミナさんの依頼です。砲撃の音、すっごく大きいらしいですよ'],
- ['シェリス','討伐',42,'双峰のグリフォン射ち','竜王の双峰を飛ぶグリフォンを射落としたい。地上の守りを頼む。',3,'シェリスさんの依頼です。竜域の依頼なので……本当に、気をつけてください'],
- ['ネイディ','調査',35,'浮島の雷雲調査','天穹群島の浮島にかかる雷雲を調べたい。同行者を募集。',2,'ネイディさんから依頼が出ていますよ。空の上のお仕事なんて、ちょっと憧れます！'],
- ['オルディス','調査',33,'密林の地脈調査','密林の地形が変わる原因を、地脈から探りたい。',2,'オルディスさんの依頼です。地面のことなら、あの人に聞くのが一番なんですよ'],
- ['セレノア','護衛',32,'温泉地の視察の護衛','熾火の山麓の温泉地を視察する。道中の護衛を頼みたい。',1,'セレノアさんの依頼です。視察……温泉の、ですよね？'],
- ['アルシェ','採集',28,'精霊の光石集め','樹海の精霊が宿る光る石を、少しだけ分けてもらいに行きたい。',1,'アルシェさんの依頼ですよ。精霊さんに失礼のないように、ですって！'],
- ['エアリー','採集',33,'毒蔓採り','毒薬の材料になる毒蔓を採りに行く。かぶれない手袋を持ってきて。',1,'エアリーさんの依頼です。手袋、ギルドでも貸し出してますからね！'],
- ['コハク','討伐',30,'鎧武者との手合わせ','沈黙の古城のサイレントアーマーと、手合わせがしたい。',2,'コハクさんの依頼です。手合わせ……相手は魔物なんですけどね！？'],
- ['イザヨイ','討伐',41,'ドレイク斬り','竜哭の大空洞で、ドレイクを一太刀で斬れるか試したい。',3,'イザヨイさんの依頼です。竜域ですよ、竜域！ 本当に大丈夫ですか……？'],
- ['エリィ','調査',39,'廃都の魔導書探し','黄昏の廃都に眠る古い魔導書を探したい。',2,'エリィさんから依頼が出ていますよ。闇の魔導書……ちょっと怖いですね'],
- ['フィー','採集',35,'浮遊石の採集','天穹群島の浮遊石を集めたい！ 飛べるから足場は任せて！',1,'フィーさんの依頼です。元気いっぱいですね～！'],
- ['ルティア','護衛',27,'聖域での祈り','白光の聖域の礼拝堂で、祈りを捧げたい。道中の護衛をお願いします。',0,'ルティアさんの依頼です。穏やかな道のりになるといいですね'],
- ['ディア','採集',26,'水鏡石の採集','逆さ水鏡の洞で、水鏡石を集めたい。',1,'ディアさんの依頼ですよ。水辺なので、ディアさんの魔法が活きますね～！'],
+ ['ヴェルミナ','討伐',35,'魔装砲の試し撃ち','天穹群島のストームハーピーを相手に、魔装砲の試し撃ちをしたい。そのあいだの守りを任せたい。',2,'ヴェルミナさんの依頼です。……ファリナさんには言わないでほしいそうです'],
+ ['シェリス','護衛',42,'主のための下見','ヴェルミナ様とファリナ様が向かう前に、竜王の双峰の道を下見しておきたい。',3,'シェリスさんの依頼です。お二人のための下見ですって。真面目ですね～'],
+ ['ネイディ','調査',35,'へんな雷雲の見物','浮島に、変な形の雷雲がかかってるって聞いたの。面白そうだから見に行こう？',2,'ネイディさんから依頼が出ていますよ。面白いもの探し、だそうです！'],
+ ['オルディス','調査',33,'地脈の結晶の下調べ','姫たちの装備に使えそうな地脈の結晶が、呑み込む密林のどこにあるか確かめておきたい。',2,'オルディスさんの依頼です。地面のことなら、あの人に聞くのが一番なんですよ'],
+ ['セレノア','調査',32,'目に効く湯の噂','熾火の山麓に、目に効くという湯があるらしい。本当かどうか確かめたい。',1,'セレノアさんの依頼です。……効くといいですね'],
+ ['アルシェ','採集',28,'霊薬の手がかり集め','霊薬の材料になるかもしれない、菌光の樹海の光キノコを集めて調べたい。',1,'アルシェさんの依頼ですよ。故郷のための研究なんだそうです'],
+ ['エルナリア','調査',27,'聖域の妖精の刻印','白光の聖域に、古い妖精族の刻印が残っているらしい。額の聖印と見比べたい。',1,'エルナリアさんの依頼です。前に出るのは苦手だそうなので、守ってあげてくださいね'],
+ ['エアリー','採集',33,'毒蔓採り','毒の研究に使う、呑み込む密林の毒蔓を採りに行く。かぶれない手袋を持ってきて。',1,'エアリーさんの依頼です。手袋、ギルドでも貸し出してますからね！'],
+ ['コハク','討伐',30,'鎧武者との手合わせ','沈黙の古城のサイレントアーマーを相手に、桜花流の型を実戦で試したい。',2,'コハクさんの依頼です。手合わせ……相手は魔物なんですけどね！？'],
+ ['イザヨイ','討伐',41,'月明かりの型稽古','風の吹かない竜哭の大空洞で、月の型を試したい。出てくるドレイクを相手に稽古する。',3,'イザヨイさんの依頼です。竜域ですよ、竜域！ 本当に大丈夫ですか……？'],
+ ['エリィ','調査',39,'廃都の幻惑の魔導書','黄昏の廃都で、古い幻惑魔法の魔導書を探したい。高く売れるかもしれないし。',2,'エリィさんから依頼が出ていますよ。……魔導書の話になると目が輝くんですよね'],
+ ['フィー','採集',35,'浮遊石の採集','天穹群島の浮遊石を集めて、実績を積みたい！ 飛べるから足場は任せて！',1,'フィーさんの依頼です。Bランクに向けて、がんばってるんですよ～！'],
+ ['ルティア','調査',27,'聖環が光る場所','白光の聖域で、聖環が強く光る場所を探したい。浄化の聖遺物があるかもしれません。',1,'ルティアさんの依頼です。穏やかな道のりになるといいですね'],
+ ['ディア','採集',26,'水鏡石の採集','水魔法の制御の研究に使う水鏡石を、逆さ水鏡の洞で集めたい。',1,'ディアさんの依頼ですよ。水辺なので、ディアさんの魔法が活きますね～！'],
  ['フリーヤ','採集',37,'魔法素材の結晶集め','知識の館で使う結晶を集めたいの～。重いから運ぶの手伝って♡',1,'フリーヤさんの依頼です。……荷物持ち、がんばってくださいね？'],
  ['ミレア','護衛',31,'遺物の現地鑑定','盆地で見つかった遺物を現地で鑑定したい。戦えないので護衛をお願いします。',1,'ミレアさんの依頼です！ ふふっ、ミレアさんが外に出るなんて珍しいですね'],
- ['ノノミ','採集',32,'温泉の湯花集め','熾火の山麓の湯花を、調合用に集めたいです……！',0,'ノノミさんの依頼です！ ノノミさん、ちゃんと守ってあげてくださいね'],
- ['レーナ','採集',32,'熾火石の採掘','炉にくべる熾火石がほしいんだ。運ぶのを手伝って！',1,'レーナさんの依頼ですよ。いい鉱石が採れたら、きっといい武器になりますね！'],
- ['サリナ','討伐',31,'ミラージュフォックス狩り','幻を見せるミラージュフォックスを射止めたい。',1,'サリナさんの依頼です。幻に惑わされないでくださいね！'],
- ['リニャ','調査',29,'霧の湖の魔法陣','忘れ霧の湖の底に、古い魔法陣があるらしい。',2,'リニャさんの依頼です。ふふっ、リニャさんとお話しするの、私けっこう好きなんですよ！'],
- ['ロザリー','調査',33,'時の止まった花','密林のどこかに、時間が止まった花が咲いているらしいの。',1,'ロザリーさんから依頼が出ていますよ。時間が止まった花……見てみたいです！'],
+ ['ノノミ','採集',32,'温泉の湯花集め','新しいポーションに使う熾火の山麓の湯花を、集めたいです……！',0,'ノノミさんの依頼です！ ノノミさん、ちゃんと守ってあげてくださいね'],
+ ['レーナ','採集',32,'熾火石の採掘','新しい鍛え方を試したいから、炉にくべる熾火石がほしいんだ。運ぶのを手伝って！',1,'レーナさんの依頼ですよ。いい鉱石が採れたら、きっといい武器になりますね！'],
+ ['サリナ','討伐',31,'ミラージュフォックス狩り','街道まで出てくるミラージュフォックスを狩って、街を守りたい。',1,'サリナさんの依頼です。幻に惑わされないでくださいね！'],
+ ['リニャ','調査',29,'お試しの湖調査','組めそうな相手を探している。お試しで、静かな忘れ霧の湖の調査に付き合ってほしい。',1,'リニャさんの依頼です。……パーティ探しも兼ねてるみたいですよ。静かにしてあげてくださいね'],
+ ['ロザリー','調査',33,'密林の変動記録','呑み込む密林の地形が変わる瞬間を、記録に残したいの。',1,'ロザリーさんから依頼が出ていますよ。研究の記録なんですって'],
  ['ミルシェ','救助',34,'湿原の負傷者救護','雷鳴湿原で立ち往生した冒険者たちを治療しに行きます。護衛をお願いします。',1,'ミルシェさんの依頼です。救護のお手伝い、ありがたいです！']
 ];
 /* ================ */
-var S={},Q={active:[],done:0,failed:0},STAY=0,sending=false,prevGold,prevAct,prevDone,prevFail,prevRank,faceTimer,TAB='board',WORKING=false,workT=[],SEL='',VIEW='',greet=true;
+var S={},Q={active:[],done:0,failed:0},CLK={day:1,time:'朝'},DAYKEY='',sending=false,prevGold,prevAct,prevDone,prevFail,prevRank,faceTimer,TAB='board',WORKING=false,workT=[],SEL='',VIEW='',greet=true;
 var LIST={normal:[],night:[],pers:[]};
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -335,7 +337,7 @@ function parse(raw){if(raw&&typeof raw==='object')return raw;if(typeof raw!=='st
 function r50(n){return Math.max(50,Math.round(n/50)*50)}
 function band(r){var m=String(r||'').trim().toUpperCase().match(/^[EDCBAS]/);return m?m[0]:''}
 function fband(f){return f<=30?'C':f<=40?'B':'A'}
-function isNight(){var h=new Date().getHours();return h>=18||h<5}
+function isNight(){return CLK.time==='夜'}
 function lv(){var l=num((S.player||{}).level);return isFinite(l)&&l>0?l:30}
 function party(){return(arr(S.party)||[]).map(nm).filter(Boolean)}
 
@@ -344,8 +346,7 @@ function hash(s){var h=1779033703^s.length;for(var i=0;i<s.length;i++){h=Math.im
 function rng(seed){var a=hash(seed);return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function pick(R,a){return a[Math.floor(R()*a.length)]}
 function shuffle(R,a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(R()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
-function today(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
-function seedOf(stay){return today()+'#'+stay}
+function seedOf(day){return 'D'+day}
 function fill(s,o){return s.replace(/\{(\w)\}/g,function(_,k){return o[k]!=null?o[k]:''})}
 
 function reward(di,f,R){var d=DIFFS[di],m={C:.8,B:1,A:1.2}[fband(f)],g=r50((d[1]+R()*(d[2]-d[1]))*m);return{g:g,xp:r50(d[3]*lv()*100),lp:d[4]}}
@@ -365,18 +366,19 @@ function genBoard(seed){
   }
   out.sort(function(a,b){return a.diff-b.diff});return out}
 function genNight(seed){var R=rng(seed+'X'),k=R()<.5?1:2;return shuffle(R,NIGHT).slice(0,k).map(function(q,i){var di=Math.min(4,q[6]+1);return{id:'x'+i,title:q[0],type:q[1],floor:q[2],body:q[3],client:q[4],line:q[5],diff:di,night:true,rw:reward(di,q[2],R)}})}
-function persPicks(seed){var R=rng(seed+'P'),k=R()<.5?3:4;return{R:R,list:shuffle(R,PERSONAL).slice(0,k+2)}}
+function wshuffle(R,a){return a.map(function(x){return[Math.pow(R(),1/(x[8]||1)),x]}).sort(function(p,q){return q[0]-p[0]}).map(function(p){return p[1]})}
+function persPicks(seed){var R=rng(seed+'P'),k=R()<.5?3:4;return{R:R,list:wshuffle(R,PERSONAL).slice(0,k+2)}}
 function genPersonal(seed,prevSeed){
   var p=persPicks(seed),prev=prevSeed?persPicks(prevSeed).list.slice(0,4).map(function(x){return x[0]}):[],R=p.R;
   var k=R()<.5?3:4,list=p.list.filter(function(x){return prev.indexOf(x[0])<0});if(list.length<k)list=p.list;
   return list.slice(0,k).map(function(q,i){var res=q[1]==='救助'&&q[7];return{id:'p'+i,who:q[0],title:q[3],type:q[1],floor:q[2],body:q[4],diff:q[5],line:q[6],client:res?q[7]:q[0],rescue:!!res,rw:reward(q[5],q[2],R)}})}
-function regen(){var s=seedOf(STAY),ps=STAY>0?seedOf(STAY-1):'';LIST.normal=genBoard(s);LIST.night=genNight(s);LIST.pers=genPersonal(s,ps)}
+function regen(){var s=seedOf(CLK.day),ps=CLK.day>1?seedOf(CLK.day-1):'';LIST.normal=genBoard(s);LIST.night=genNight(s);LIST.pers=genPersonal(s,ps)}
 function findQ(id){var all=LIST.normal.concat(LIST.night,LIST.pers);for(var i=0;i<all.length;i++)if(all[i].id===id)return all[i];return null}
 function taken(q){return Q.active.some(function(a){return nm(a.title||a)===q.title})}
 
 /* 画像・カメラ */
 function setBg(){var t=isNight()?'night':'day';$('bgimg').src=IMG_BASE+'bg_'+t+'.webp';$('fgimg').src=IMG_BASE+'fg_'+t+'.webp';
-  var d=new Date();$('clock').textContent=(isNight()?'☾ 夜 ':'☀ 昼 ')+d.getHours()+':'+('0'+d.getMinutes()).slice(-2)}
+  $('clock').textContent=({朝:'☀ 朝',昼:'☀ 昼',夕方:'◐ 夕方',夜:'☾ 夜'}[CLK.time]||CLK.time)+'・'+CLK.day+'日目'}
 function view(v){if(VIEW===v)return;VIEW=v;var c=VIEWS[v],w=$('world');w.style.left=(-c[0]/c[2]*100)+'%';w.style.top=(-c[1]/c[3]*100)+'%';w.style.width=(1536/c[2]*100)+'%';w.style.height=(1024/c[3]*100)+'%';$('scene').classList.toggle('view-board',v==='board')}
 (function(){var k=$('keeper'),h='';FACES.forEach(function(f){h+='<img data-face="'+f+'" src="'+IMG_BASE+'lina_'+f+'.webp" alt="" class="'+(f==='normal'?'':'off')+'" onerror="this.remove()">'});k.innerHTML=h})();
 function face(f,hop,force){
@@ -429,9 +431,9 @@ function draw(){
   $('gold').textContent=fmt(gold);
   if(isFinite(prevGold)&&isFinite(gold)&&gold!==prevGold){var e=document.createElement('span');e.className='pop '+(gold<prevGold?'dn':'up');e.textContent=(gold>prevGold?'+':'')+fmt(gold-prevGold);document.querySelector('.purse').appendChild(e);setTimeout(function(){e.remove()},1300)}
   prevGold=gold;
-  var d=new Date();$('day').textContent=(d.getMonth()+1)+'月'+d.getDate()+'日'+(STAY?'・宿泊'+STAY+'回目の朝':'')+'（宿に泊まると張り替え）';
+  $('day').textContent=CLK.day+'日目（日付が変わると張り替え）';
   $('normal').innerHTML=LIST.normal.map(card).join('');
-  $('nightq').innerHTML=isNight()?LIST.night.map(card).join(''):'<div class="nightoff">☾ 夜（18時〜5時）になると、夜だけの依頼が貼り出されます。夜は魔物が強く、視界も悪いので危険です。</div>';
+  $('nightq').innerHTML=isNight()?LIST.night.map(card).join(''):'<div class="nightoff">☾ 夜になると、夜だけの依頼が貼り出されます。夜は魔物が強く、視界も悪いので危険です。</div>';
   $('pers').innerHTML=LIST.pers.map(card).join('');
   /* 受注中 */
   var A=Q.active;$('acount').hidden=!A.length;$('acount').textContent=A.length;
@@ -504,7 +506,8 @@ function onUpdateData(statusData){
   try{var st=parse(read(statusData,STATE_VAR));S=st||{}}catch(e){bad=true}
   try{var q=parse(read(statusData,QUEST_VAR))||{};Q={active:(arr(q.active)||arr(q.quests)||[]).filter(Boolean),done:num(q.done)||0,failed:num(q.failed)||0}}catch(e){bad=true}
   $('err').hidden=!bad;if(bad)$('err').textContent='記録の一部を読み込めませんでした。前回の表示を維持しています。';
-  var s=num(read(statusData,STAY_VAR));s=isFinite(s)?s:0;if(s!==STAY){STAY=s;regen()}
+  try{var ck=parse(read(statusData,CLOCK_VAR))||{},dy=num(ck.day),tm=String(ck.time||'').trim();CLK={day:isFinite(dy)&&dy>0?Math.floor(dy):1,time:/^(朝|昼|夕方|夜)$/.test(tm)?tm:'朝'}}catch(e){}
+  var key=CLK.day+'|'+CLK.time;if(key!==DAYKEY){var newDay=DAYKEY&&DAYKEY.split('|')[0]!==String(CLK.day);DAYKEY=key;regen();setBg();if(newDay&&!WORKING)say('おはようございます！ 掲示板、新しい依頼に張り替えましたよ！','smile',5000)}
   var n=Q.active.length,dn=Q.done,fl=Q.failed,rk=String((S.player||{}).rank||'').toUpperCase();
   if(isFinite(prevDone)&&dn>prevDone)reportFx(false);
   else if(isFinite(prevFail)&&fl>prevFail)reportFx(true);
@@ -512,8 +515,7 @@ function onUpdateData(statusData){
   if(prevRank&&rk&&RANKS.indexOf(rk)>RANKS.indexOf(prevRank)){later(function(){banner('RANK UP');sparkles(14,15,85,15,70)},300);setTimeout(function(){seq(['clap1','clap2','clap1','clap2'],350,'moved');say('ランクアップ、おめでとうございます！ ……私、ずっと見てましたから！','moved',6000)},400)}
   prevAct=n;prevDone=dn;prevFail=fl;prevRank=rk||prevRank;draw();
 }
-setBg();setInterval(function(){setBg();draw()},60*1000);
-regen();view('counter');draw();
+setBg();regen();view('counter');draw();
 setTimeout(function(){if(greet&&TAB==='board'){view('board');seq(['point1','point2'],450,'point2');say('今日の掲示板はこちらです！ 気になる依頼があったら、押してみてくださいね♪','proud')}},2600);
 var IDLE=[['ふふっ、私そういうのよくわかっちゃうんです','wink'],['あわわ……ちょっと書類が多すぎませんか、これ！？','paper'],['はい！ お任せください！','proud'],['今日も依頼、たくさん来てますよ～！','smile']];
 setInterval(function(){if(WORKING||SEL||document.activeElement===$('msg')||$('msg').value||document.querySelector('.arm'))return;var l=isNight()&&Math.random()<.4?['ふぁ……あっ、すみません！ 夜のギルドって、静かで眠くなっちゃって','sleepy']:IDLE[Math.floor(Math.random()*IDLE.length)];say(l[0],l[1],6000)},18000);
