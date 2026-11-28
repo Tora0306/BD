@@ -1,0 +1,380 @@
+<!--
+  エマの宿屋 v1 — StoryEngine ステータスビュー（上級モード）用 / 宿屋ストーリーノード専用
+  変数 abyss_state（JSON文字列）、stay_count・rest_count（数値）を読みます。推奨サイズ 500 × 1000
+  画像は GitHub Pages（https://tora0306.github.io/BD/5/）から読み込みます。
+  相談は会話欄に文を入れるだけ。「送る」で送信（クレジット消費）。退店ボタンは2回押し。
+-->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Shippori+Mincho+B1:wght@600;800&display=swap">
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#1c120c}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+.inn{--gh:#f3dc9a;--ink:#f6efe4;--mn:'Shippori Mincho B1','Yu Mincho',serif;--cz:Cinzel,Georgia,serif;
+  height:100vh;display:flex;flex-direction:column;padding-bottom:8px;color:var(--ink);font:13px/1.5 'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;
+  background:radial-gradient(120% 60% at 50% 0,#4a2c1a,transparent 70%),repeating-linear-gradient(90deg,#ffffff05 0 2px,transparent 2px 22px),linear-gradient(#2a1a10,#160e08)}
+.title{position:relative;flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:34px;margin:8px 10px 0;border-radius:5px 5px 0 0;
+  background:linear-gradient(#7a4a26,#4a2a14);border:2px solid #160e08;border-bottom:0;box-shadow:inset 0 1px 0 #c8925a,inset 0 0 0 1px #d9b45a55}
+.title b{font:800 16px/1 var(--mn);letter-spacing:.22em;color:#fff6e0;text-shadow:0 2px 0 #160e08,0 0 10px #f0a05a88}
+.title span{font:700 8.5px/1 var(--cz);letter-spacing:.3em;color:var(--gh)}
+.title .exit{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:4px 9px;border-radius:4px;border:1px solid #160e08;background:linear-gradient(#6a3e20,#3a2010);color:#f3e6c0;font:700 11px/1 var(--mn)}
+.title .exit:hover{filter:brightness(1.2)}
+.title .exit.arm{background:linear-gradient(#e0b44a,#a8781c);color:#fff}
+
+.scene{position:relative;flex:none;margin:0 10px;aspect-ratio:3/2;overflow:hidden;border:2px solid #160e08;border-radius:0 0 5px 5px;box-shadow:0 6px 14px #000c;background:#6a4a2a}
+.scene .bg,.scene .room{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scene .fg{position:absolute;left:42.64%;top:41.99%;width:57.36%;height:58.01%;z-index:1;pointer-events:none}
+.scene::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 100% at 50% 40%,transparent 60%,#0006);z-index:4}
+.keeper{position:absolute;left:55%;top:14.8%;width:24.74%;aspect-ratio:4/5;z-index:0;animation:breath 3.6s ease-in-out infinite;transform-origin:50% 100%}
+.keeper img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .15s}
+.keeper img.off{opacity:0}
+.keeper.hop{animation:hop .35s ease-out,breath 3.6s ease-in-out .35s infinite}
+@keyframes breath{50%{transform:translateY(-1.5px)}}
+@keyframes hop{40%{transform:translateY(-6px)}}
+.bubble{position:absolute;left:24%;top:8%;width:33%;z-index:2;padding:9px 12px 10px;border-radius:12px;background:#fffaf0;color:#3a2414;
+  font:700 12.5px/1.6 var(--mn);box-shadow:0 3px 0 #c8a878,0 6px 12px #0007;border:2px solid #8a5a2a}
+.bubble::after{content:"";position:absolute;right:-13px;top:46%;border:9px solid transparent;border-left:13px solid #8a5a2a;border-right:0}
+.bubble::before{content:"";position:absolute;right:-9px;top:calc(46% + 2px);border:7px solid transparent;border-left:10px solid #fffaf0;border-right:0;z-index:1}
+.bubble small{display:block;margin-bottom:3px;font:800 10px/1 var(--mn);letter-spacing:.18em;color:#b0602a}
+.bubble.pop{animation:pop .3s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(4px) scale(.96)}}
+.purse{position:absolute;left:3%;bottom:4%;z-index:2;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:6px;background:linear-gradient(#4a2e1a,#2a180c);border:2px solid #160e08;box-shadow:inset 0 0 0 1px #d9b45a55,0 4px 10px #000a}
+.coin{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2b8,#e0b04a 45%,#8a6420);box-shadow:0 0 0 2px #5a3f14,0 0 8px #f0b45a88}
+.purse b{font:700 19px/1 var(--cz);color:#ffe0a6;text-shadow:0 0 10px #f0b45a66;font-variant-numeric:tabular-nums}
+.purse small{font:700 11px/1 var(--cz);color:#f0b45a}
+.purse .pop{position:absolute;left:40px;top:-16px;font:700 13px/1 var(--cz);text-shadow:0 1px 3px #000;animation:rise 1.2s ease-out forwards}
+.purse .pop.dn{color:#ff9b8e}.purse .pop.up{color:#9ff0b0}
+@keyframes rise{0%{opacity:0;transform:translateY(4px)}15%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+.err{position:absolute;left:3%;right:3%;top:3%;z-index:6;padding:5px 8px;font-size:11px;color:#ffd0c0;background:#7a2a1acc;border-radius:4px}
+
+/* 眠りの演出 */
+.night{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .9s}
+.night.on{opacity:1}
+.night .room{filter:brightness(.42) saturate(.8) hue-rotate(-10deg)}
+.night.morning .room{filter:brightness(1.05) saturate(1.05);transition:filter 1.4s}
+.night.rest .room{filter:brightness(.6) saturate(1.1)}
+.night .tint{position:absolute;inset:0;background:radial-gradient(80% 70% at 20% 20%,#6a80d055,transparent 70%),#0a1430aa;transition:opacity 1.4s}
+.night.morning .tint{opacity:0}
+.night.rest .tint{background:radial-gradient(80% 70% at 60% 50%,#ff70a855,transparent 70%),#2a0a1a88}
+.night .zz{position:absolute;left:58%;top:38%;font:800 22px/1 var(--cz);color:#cfe0ff;text-shadow:0 0 8px #6a8aff;opacity:0}
+.night.on:not(.morning) .zz{animation:zz 2.2s ease-in-out infinite}
+.night .zz:nth-child(4){left:63%;top:30%;font-size:16px;animation-delay:.7s!important}
+.night .zz:nth-child(5){left:67%;top:24%;font-size:12px;animation-delay:1.4s!important}
+@keyframes zz{0%{opacity:0;transform:translateY(6px)}40%{opacity:1}100%{opacity:0;transform:translateY(-16px)}}
+.night .cap{position:absolute;left:50%;bottom:10%;transform:translateX(-50%);padding:5px 14px;border-radius:999px;background:#000a;color:#fff3cf;font:800 13px/1.4 var(--mn);letter-spacing:.1em;white-space:nowrap}
+.night .heart{position:absolute;font-size:16px;opacity:0;animation:heart 2.4s ease-in-out infinite}
+@keyframes heart{0%{opacity:0;transform:translateY(8px) scale(.6)}40%{opacity:1}100%{opacity:0;transform:translateY(-20px) scale(1)}}
+.sparkle{position:absolute;z-index:6;width:9px;height:9px;pointer-events:none;background:radial-gradient(circle,#fff 0 20%,transparent 60%);animation:twinkle 1.1s ease-out forwards}
+.sparkle::before,.sparkle::after{content:"";position:absolute;left:50%;top:50%;width:2px;height:16px;margin:-8px 0 0 -1px;background:linear-gradient(transparent,#fff6d0,transparent)}
+.sparkle::after{transform:rotate(90deg)}
+@keyframes twinkle{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-14px) scale(.6)}}
+
+.tabs{flex:none;display:flex;gap:3px;margin:9px 10px 0}
+.tabs button{flex:1;padding:8px 0 7px;border:1px solid #8a5a2a;border-bottom:0;border-radius:6px 6px 0 0;background:linear-gradient(#4a2e1a,#2a180c);color:#e0c8a8;font:700 12px/1 var(--mn);letter-spacing:.04em}
+.tabs button.on{background:linear-gradient(#fffaf0,#f2e4cc);color:#3a2414;border-color:#c9a878;box-shadow:0 -2px 10px #f0a05a44}
+.tabs button.pink.on{background:linear-gradient(#fff0f6,#f8dce8);color:#6a1a3a}
+
+.ledger{flex:1;min-height:0;overflow:auto;margin:0 10px;padding:10px 12px;border:1px solid #c9a878;border-radius:0 0 4px 4px;color:#3a2414;
+  background:repeating-linear-gradient(#0000 0 25px,#b0602a14 25px 26px),radial-gradient(120% 80% at 50% 0,#fffcf4,#f4e8d2);box-shadow:inset 0 0 18px #8a5a2a33;scrollbar-width:thin;scrollbar-color:#c8a878 transparent}
+.pane{display:none}.pane.on{display:block;animation:pop .25s ease-out}
+.h{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:800 13px/1 var(--mn);letter-spacing:.14em;color:#8a4a1a}
+.h:not(:first-child){margin-top:14px}
+.h::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#c8a878,transparent)}
+.h .sub{order:2;font:600 10.5px/1 var(--mn);letter-spacing:.04em;color:#9a7a5a}
+.muted{font-size:12px;color:#8a7a6a}
+.note{margin:8px 0 0;font-size:11.5px;color:#6a5444}
+
+.row{display:flex;align-items:center;gap:8px;padding:8px 6px;border-bottom:1px dashed #c8a87888}
+.row.sel{background:#f0a05a22}
+.row .ic{flex:none;width:30px;height:30px;border-radius:6px;display:grid;place-items:center;font-size:17px;background:#f6e2c4;border:1px solid #d8b888}
+.row .n{flex:1;min-width:0;font:800 13px/1.3 var(--mn)}
+.row .n small{display:block;font:400 10.5px/1.35 sans-serif;color:#7a6454}
+.row .val{flex:none;font:700 12px/1.3 var(--cz);color:#8a5a1c;text-align:right}
+.step{display:flex;align-items:center;gap:4px}
+.step button{width:24px;height:24px;border-radius:50%;border:1px solid #b08a5a;background:radial-gradient(#fff,#f0e2cc);color:#3a2414;font-weight:800;line-height:1}
+.step button:disabled{opacity:.3;cursor:default}
+.step output{min-width:16px;text-align:center;font:700 13px var(--cz)}
+.chips2{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 6px}
+.chips2 button{padding:4px 10px;border-radius:999px;border:1px solid #c8a878;background:#fff;color:#4a3424;font:700 11.5px/1.4 sans-serif}
+.chips2 button.on{background:#8a4a1a;color:#fff;border-color:#8a4a1a}
+.chips2.pink button.on{background:#c0407a;border-color:#c0407a}
+.chips2 button:disabled{opacity:.35;cursor:default}
+.big{display:flex;gap:8px;flex-wrap:wrap}
+.big button{flex:1 1 45%;padding:10px 8px;border-radius:8px;border:1px solid #c8a878;background:linear-gradient(#fffaf0,#f4e4c8);color:#3a2414;font:800 12.5px/1.4 var(--mn);text-align:left}
+.big button small{display:block;font:400 10.5px/1.4 sans-serif;color:#7a6454}
+.big button:hover{filter:brightness(1.04)}
+.restbox{padding:10px 12px;border-radius:8px;background:linear-gradient(#fff4f8,#fbe4ee);border:1px solid #e8a8c4}
+.restbox .h{color:#a0306a}
+
+.stamps{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:4px 0 4px}
+.stamp{aspect-ratio:1;border-radius:50%;border:2px dashed #c8a878;display:grid;place-items:center;font:800 11px/1.1 var(--mn);color:#b8a088;background:#fffaf0;text-align:center}
+.stamp.on{border:2px solid #c0302a;color:#c0302a;background:radial-gradient(circle,#fff 40%,#ffe8e0);transform:rotate(-8deg);font-size:13px}
+.stamp.free{border-color:#d9a82a;color:#a8781c;background:#fff6d8}
+.stamp.free.next{box-shadow:0 0 0 3px #f3dc9a,0 0 12px #f0b45a}
+.board{padding:14px 16px;border-radius:6px;background:linear-gradient(#5a3420,#3a200e);color:#f6ecd8;border:3px solid #b8964a;box-shadow:inset 0 0 0 1px #f3dc9a55,0 4px 8px #0006;margin-top:12px}
+.board h4{margin:0 0 4px;font:800 14px var(--mn);color:var(--gh);letter-spacing:.14em}
+.board h4:not(:first-child){margin-top:12px}
+.board .ln{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;border-bottom:1px dashed #ffffff26;font:700 12.5px var(--mn)}
+.board .ln b{font-family:var(--cz);color:#fff;white-space:nowrap}
+.board p{margin:10px 0 0;font-size:11.5px;color:#ecdcc4}
+
+.order{flex:none;margin:0 10px;padding:7px 10px;background:#fbf2e4;color:#3a2414;border:1px solid #c9a878;border-top:2px dashed #c8a878;font-size:12px}
+.order .pick{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#5a4434}
+.order .act{display:flex;align-items:center;gap:6px;margin-top:5px}
+.order .tot{flex:1;font:800 13px var(--mn)}
+.order .tot b{font-family:var(--cz)}
+.btn{padding:9px 14px;border-radius:5px;border:1px solid #160e08;background:linear-gradient(#a8622a,#6a3a14);color:#fff6e6;font:800 12.5px/1 var(--mn);letter-spacing:.06em;box-shadow:0 3px 0 #2a160a,inset 0 1px 0 #ffffff44}
+.btn:hover{filter:brightness(1.1)}.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #2a160a}
+.btn:disabled{filter:grayscale(.85) brightness(.85);cursor:default;transform:none}
+.btn.gold{background:linear-gradient(#d9b45a,#a07a24);color:#2a1e06;box-shadow:0 3px 0 #5a420e,inset 0 1px 0 #ffffff66}
+.btn.pink{background:linear-gradient(#e870a8,#b03a72);color:#fff;box-shadow:0 3px 0 #5a1a36,inset 0 1px 0 #ffffff66}
+.btn.sub{background:linear-gradient(#6a3e20,#3a2010);color:#f0e2cc}
+
+.talk{position:relative;flex:none;display:flex;align-items:flex-end;gap:6px;margin:5px 10px 0;padding:6px;border-radius:6px;background:linear-gradient(#4a2e1a,#2a180c);border:1px solid #8a5a2a}
+.talk textarea{flex:1;min-width:0;height:36px;max-height:84px;padding:8px 10px;resize:none;border:1px solid #b08a5a;border-radius:4px;background:#fffaf0;color:#3a2414;font:inherit;line-height:1.45;overflow-y:hidden}
+.talk textarea:focus{outline:2px solid #d9b45a88}
+.talk .btn{flex:none;padding:8px 14px}
+.tpl{flex:none;padding:8px 10px;border-radius:5px;border:1px solid #8a5a2a;background:linear-gradient(#6a3e20,#3a2010);color:#f3e6c0;font:700 12px/1 var(--mn);white-space:nowrap}
+.tpl.on{background:linear-gradient(#8a5a30,#5a3418);color:#fff3cf}
+.chips{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:7;display:none;flex-wrap:wrap;gap:5px;padding:9px;border-radius:8px;background:#2a180cf2;border:1px solid #b08a5a;box-shadow:0 6px 16px #000a}
+.chips.open{display:flex;animation:pop .2s ease-out}
+.chips button{flex:none;padding:4px 10px;border-radius:999px;border:1px solid #8a5a2a;background:#3a2010;color:#f0dcb8;font-size:11px}
+.chips button:hover{background:#5a3418}
+.chips button.hi{border-color:#d9b45a;background:linear-gradient(#5a4a1c,#3a2e0e);color:#ffe9b0}
+.status{min-height:16px;margin:3px 10px 0;font-size:11px;color:#ecdcc4;text-align:center}
+</style>
+
+<div class="inn" id="inn">
+  <div class="title"><span>REST</span><b>エマの宿屋</b><span>&amp; INN</span><button class="exit" type="button" id="leave" data-label="宿を出る">宿を出る</button></div>
+  <div class="scene" id="scene">
+    <img class="bg" id="bgimg" alt="" onerror="this.remove()">
+    <div class="keeper" id="keeper"></div>
+    <img class="fg" id="fgimg" alt="" onerror="this.remove()">
+    <div class="bubble" id="bubble"><small>エマ</small><span id="say">いらっしゃいませ！ お泊まりですか？</span></div>
+    <div class="purse"><span class="coin"></span><b id="gold">—</b><small>G</small></div>
+    <div class="night" id="night"><img class="room" id="roomimg" alt=""><div class="tint"></div><span class="zz">Z</span><span class="zz">z</span><span class="zz">z</span><div class="cap" id="cap">おやすみなさい……</div></div>
+    <div class="err" id="err" hidden></div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button type="button" data-t="stay" class="on">宿泊</button>
+    <button type="button" data-t="rest" class="pink">休憩室</button>
+    <button type="button" data-t="food">朝ごはん</button>
+    <button type="button" data-t="talk">うわさ</button>
+    <button type="button" data-t="book">宿帳</button>
+  </nav>
+  <main class="ledger" id="ledger">
+    <section class="pane on" data-p="stay">
+      <div class="h">お部屋<span class="sub">1部屋あたりの料金</span></div>
+      <div id="rooms"></div>
+      <p class="note" id="freenote" hidden></p>
+      <div class="h">夜の語らい<span class="sub">泊まった夜に1人と話す（無料）</span></div>
+      <div class="chips2" id="nightwith"></div>
+      <p class="note">どのお部屋も、HP・MP全回復＋状態異常をすべて治します。</p>
+    </section>
+    <section class="pane" data-p="rest">
+      <div class="restbox">
+        <div class="h">休憩室💕<span class="sub">2人・数時間 80G</span></div>
+        <p class="note" style="margin:0 0 8px">二人きりでゆっくり過ごせるお部屋です。HP・MPが半分回復します。誘えるかどうかは、お相手しだい。</p>
+        <div class="chips2 pink" id="restwith"></div>
+      </div>
+    </section>
+    <section class="pane" data-p="food">
+      <div class="h">朝ごはん・お弁当</div>
+      <div id="foods"></div>
+      <p class="note">朝ごはんの効果は、次の戦闘1回だけです。</p>
+    </section>
+    <section class="pane" data-p="talk">
+      <div class="h">うわさ話<span class="sub">どれも無料</span></div>
+      <div class="big">
+        <button type="button" data-rumor="emma">エマのうわさ話<small>お客さんや街の人の話を、こっそり教えてくれます</small></button>
+        <button type="button" data-rumor="adv">冒険者のうわさ<small>泊まり客の噂話。本当とは限りません</small></button>
+      </div>
+      <div class="h">ロビーの会話<span class="sub">2人を選んで、こっそり聞く</span></div>
+      <div class="chips2" id="lobby"></div>
+      <p class="note">2人はあなたに気づいていません。あなたは聞いているだけです。</p>
+    </section>
+    <section class="pane" data-p="book">
+      <div class="h">宿帳スタンプ<span class="sub" id="stampsub"></span></div>
+      <div class="stamps" id="stamps"></div>
+      <p class="note">5回泊まると、6回目のお泊まりが無料になります。</p>
+      <div class="board" id="board"></div>
+    </section>
+  </main>
+  <div class="order" id="order">
+    <div class="pick" id="pick"></div>
+    <div class="act"><span class="tot" id="tot"></span><button class="btn sub" type="button" id="clr">取消</button><button class="btn gold" type="button" id="go">頼む</button></div>
+  </div>
+  <div class="talk"><button class="tpl" type="button" id="tpl">定型文 ▾</button><textarea id="msg" rows="1" maxlength="500" placeholder="自由に話しかけよう（Enterで送信）"></textarea><button class="btn" type="button" id="send">送る</button>
+  <div class="chips" id="chips">
+    <button type="button" data-say="「エマさん、空いてるお部屋はありますか？」">空き部屋は？</button>
+    <button type="button" data-say="「エマさん、おすすめのお部屋はどれですか？」">おすすめは？</button>
+    <button type="button" data-say="「エマさん、もう少し安くなりませんか？」">値切る</button>
+    <button type="button" data-say="「エマさん、何か困っていることや、頼みたいクエストはありませんか？」">クエストはある？</button>
+    <button type="button" class="hi" data-say="「エマさん、よかったら一緒にパーティを組んで、アビスに潜りませんか？」">パーティに誘う</button>
+    <button type="button" data-say="「エマさん、無理してませんか？ 少し休んでくださいね」">エマを気づかう</button>
+    <button type="button" data-say="「エマさん、最近どうですか？」">世間話</button>
+    <button type="button" data-say="「みんな、今日はここに泊まっていこうか？」">仲間に声をかける</button>
+  </div></div>
+  <p class="status" id="status">相談ボタンは会話欄に文を入れます。「送る」で送信（クレジット消費）</p>
+</div>
+
+<script>
+/* ===== 設定 ===== */
+var STATE_VAR = 'abyss_state', COUNT_VAR = 'stay_count', REST_VAR = 'rest_count';
+var IMG_BASE = 'https://tora0306.github.io/BD/5/';
+var FACES = ['normal','smile','proud','think','surprise','shy','affection','serious','worried','sad','angry','sleepy','key_1','key_2','key_3','key_wink','stamp_1','stamp_2','bow_1','bow_2','breakfast_1','breakfast_2','whisper'];
+var ROOMS = [['single','個室','🛏️',80,1],['double','二人部屋','🛏️🛏️',100,2],['triple','三人部屋','🛏️🛏️🛏️',120,3]];
+var REST_FEE = 80;
+var FOODS = [['朝ごはん','🍳',30,'次の戦闘1回だけ最大HP＋20'],['お弁当','🍱',50,'携帯食料を1個もらえる']];
+var TOWN = ['ノノミ','レーナ','ミレア','フリーヤ','リーナ','サラ','リーシャ','ウサリア','ティナ','エマ'];
+var LEAVE_TEXT = '宿屋を出る。';
+var IDLE = [['よーし、今日も頑張ります！','proud'],['お部屋はぜーんぶ、ふかふかにしてありますよ！','smile'],['アビス帰りですか？ おかえりなさい！','smile'],['あわわっ、シーツの洗濯がまだでした～！','worried']];
+var KEY_LINES = ['はいっ！ 休憩室の鍵です！ ご、ごゆっくりどうぞ～💕','お二人さまですね！ ……えへへ、ごゆっくり～💕','お部屋は一番奥です！ あっ、壁は厚めなので、ご安心くださいね！ ……って、何言ってるんでしょう私！？','何も聞きませんよ！ 宿屋ですから！ ……ごゆっくりどうぞ～💕'];
+/* ================ */
+var S={},COUNT=NaN,prevCount,REST=NaN,prevRest,sending=false,prevGold,faceTimer,TAB='stay',WORKING=false,workT=[];
+var roomQ={single:0,double:0,triple:0},nightWith='',restWith='',foodQ=[0,0],lobby=[],lastRoom='double';
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function num(v){return typeof v==='number'&&isFinite(v)?v:(typeof v==='string'&&v.trim()!==''&&!isNaN(+v)?+v:NaN)}
+function fmt(n){return isFinite(n)?n.toLocaleString('ja-JP'):'—'}
+function nm(x){return x==null?'':typeof x==='object'?(x.name||x.id||''):String(x)}
+function arr(x){return Array.isArray(x)?x:null}
+function parse(raw){if(raw&&typeof raw==='object')return raw;if(typeof raw!=='string'||!raw.trim())return null;return JSON.parse(raw.trim().replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,''))}
+function party(){return(arr(S.party)||[]).map(nm).filter(Boolean)}
+function freeNext(){return isFinite(COUNT)&&(COUNT+1)%6===0}
+
+/* 画像（時間帯で受付の背景を変える） */
+function tod(){var h=new Date().getHours();return h>=5&&h<10?'morning':h>=10&&h<17?'noon':'evening'}
+function setBg(){var t=tod();$('bgimg').src=IMG_BASE+'bg_'+t+'.webp';$('fgimg').src=IMG_BASE+'fg_'+t+'.webp'}
+setBg();setInterval(setBg,10*60*1000);
+(function(){var k=$('keeper'),h='';FACES.forEach(function(f){h+='<img data-face="'+f+'" src="'+IMG_BASE+'emma_'+f+'.webp" alt="" class="'+(f==='normal'?'':'off')+'" onerror="this.remove()">'});k.innerHTML=h})();
+function face(f,hop,force){
+  if(WORKING&&!force)return;
+  document.querySelectorAll('#keeper img').forEach(function(i){i.classList.toggle('off',i.dataset.face!==f)});
+  if(!document.querySelector('#keeper img[data-face="'+f+'"]')){var n=document.querySelector('#keeper img[data-face="normal"]');if(n)n.classList.remove('off')}
+  if(hop){var k=$('keeper');k.classList.remove('hop');void k.offsetWidth;k.classList.add('hop')}
+}
+function say(t,f,back){var b=$('bubble');$('say').textContent=t;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');if(!WORKING)face(f||'normal',f==='smile'||f==='proud');clearTimeout(faceTimer);if(back&&!WORKING)faceTimer=setTimeout(function(){face('normal')},back)}
+function later(fn,ms){workT.push(setTimeout(fn,ms))}
+function stopWork(){workT.forEach(clearTimeout);workT=[];WORKING=false}
+function seq(frames,ms,end){stopWork();WORKING=true;frames.forEach(function(f,i){later(function(){face(f,i===0,true)},i*ms)});later(function(){WORKING=false;face(end||'smile',true)},frames.length*ms+400)}
+function sparkles(n,x0,x1,y0,y1){for(var i=0;i<n;i++)(function(i){setTimeout(function(){var s=document.createElement('i');s.className='sparkle';s.style.left=(x0+Math.random()*(x1-x0))+'%';s.style.top=(y0+Math.random()*(y1-y0))+'%';$('scene').appendChild(s);setTimeout(function(){s.remove()},1200)},i*150)})(i)}
+
+/* 眠り → 朝 */
+function sleepFx(room,rest){
+  var n=$('night');$('roomimg').src=IMG_BASE+'room_'+(rest?'rest':room)+'.webp';
+  n.classList.remove('morning','rest');if(rest)n.classList.add('rest');
+  [].slice.call(n.querySelectorAll('.heart')).forEach(function(h){h.remove()});
+  if(rest){for(var i=0;i<5;i++){var h=document.createElement('span');h.className='heart';h.textContent='💗';h.style.left=(30+i*11)+'%';h.style.top=(35+(i%2)*10)+'%';h.style.animationDelay=(i*.45)+'s';n.appendChild(h)}}
+  $('cap').textContent=rest?'……💕':'おやすみなさい……';n.classList.add('on');
+  setTimeout(function(){if(rest){$('cap').textContent='（しばらくして……）';}else{n.classList.add('morning');$('cap').textContent='おはようございます！';sparkles(10,20,80,20,70)}},3200);
+  setTimeout(function(){n.classList.remove('on');setTimeout(function(){n.classList.remove('morning','rest')},900);
+    if(rest)say(['お、お楽しみでしたね……///','おかえりなさい！ ……あれ？ お顔、ちょっと赤いですよ？','……なんだか、来たときより仲良しに見えます！ えへへ'][Math.floor(Math.random()*3)],'shy',6000);
+    else{seq(['bow_1','bow_2'],500,'smile');say('おはようございます！ よく眠れましたか？ 今日も、いってらっしゃいませ！','smile')}},6000);
+}
+
+/* タブ */
+var TAB_LINE={stay:['お泊まりですね！ お部屋はどうしますか？','smile'],rest:['きゅ、休憩室ですか！？ ……は、はいっ、ご用意できますよ！','shy'],food:['朝ごはん、すっごく美味しいですよ！ えへへ','proud'],talk:['うわさ話ですか？ ……ここだけの話、ですよ？','whisper'],book:['宿帳です！ スタンプ、たまってきましたか？','smile']};
+document.querySelectorAll('#tabs button').forEach(function(b){b.onclick=function(){TAB=b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(function(x){x.classList.toggle('on',x===b)});
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('on',p.dataset.p===TAB)});
+  $('ledger').scrollTop=0;var l=TAB_LINE[TAB];say(l[0],l[1],4000);draw()}});
+
+function chips(id,list,sel,attr){$(id).innerHTML=list.length?list.map(function(n){return '<button type="button" '+attr+'="'+esc(n)+'"'+((Array.isArray(sel)?sel.indexOf(n)>=0:sel===n)?' class="on"':'')+'>'+esc(n)+'</button>'}).join(''):'<span class="muted">（いまパーティの仲間はいません）</span>'}
+function draw(){
+  var p=S.player||{},gold=num(p.gold);
+  $('gold').textContent=fmt(gold);
+  if(isFinite(prevGold)&&isFinite(gold)&&gold!==prevGold){var e=document.createElement('span');e.className='pop '+(gold<prevGold?'dn':'up');e.textContent=(gold>prevGold?'+':'')+fmt(gold-prevGold);document.querySelector('.purse').appendChild(e);setTimeout(function(){e.remove()},1300)}
+  prevGold=gold;
+  var P=party(),size=P.length+1;if(nightWith&&P.indexOf(nightWith)<0)nightWith='';
+  $('rooms').innerHTML=ROOMS.map(function(r){var q=roomQ[r[0]];return '<div class="row'+(q?' sel':'')+'"><span class="ic">'+r[2].slice(0,2)+'</span><span class="n">'+r[1]+'<small>'+r[4]+'人まで</small></span><span class="val">'+r[3]+' G</span><span class="step"><button type="button" data-r="'+r[0]+'" data-d="-1"'+(q?'':' disabled')+'>−</button><output>'+q+'</output><button type="button" data-r="'+r[0]+'" data-d="1"'+(q>=4?' disabled':'')+'>＋</button></span></div>'}).join('');
+  var fn=$('freenote');fn.hidden=!freeNext();fn.innerHTML='🎉 次のお泊まりは<b>スタンプ特典で無料</b>です！';
+  chips('nightwith',P,nightWith,'data-nw');
+  var restList=P.concat(TOWN.filter(function(n){return P.indexOf(n)<0&&n!=='エマ'}));
+  chips('restwith',restList,restWith,'data-rw');
+  $('foods').innerHTML=FOODS.map(function(f,i){var q=foodQ[i];return '<div class="row'+(q?' sel':'')+'"><span class="ic">'+f[1]+'</span><span class="n">'+f[0]+'<small>'+f[3]+'</small></span><span class="val">'+f[2]+' G</span><span class="step"><button type="button" data-f="'+i+'" data-d="-1"'+(q?'':' disabled')+'>−</button><output>'+q+'</output><button type="button" data-f="'+i+'" data-d="1"'+(q>=6?' disabled':'')+'>＋</button></span></div>'}).join('');
+  chips('lobby',TOWN.filter(function(n){return P.indexOf(n)<0}),lobby,'data-lb');
+  var c=isFinite(COUNT)?COUNT:0,cur=c%6;$('stampsub').textContent=isFinite(COUNT)?'これまで '+c+' 泊':'記録なし';
+  var h='';for(var i=0;i<6;i++){var on=i<cur,free=i===5;h+='<div class="stamp'+(on?' on':'')+(free?' free':'')+(free&&cur===5?' next':'')+'">'+(free?(cur===5?'次は<br>無料！':'無料'):on?'泊':(i+1))+'</div>'}$('stamps').innerHTML=h;
+  drawOrder(size);
+  $('leave').disabled=sending;$('send').disabled=sending;
+}
+function drawOrder(size){
+  var show=TAB!=='book',pick='',tot='',can=false,go='頼む',pink=false;
+  if(TAB==='stay'){var a=[],sum=0,cap=0;ROOMS.forEach(function(r){var q=roomQ[r[0]];if(q){a.push(r[1]+'×'+q);sum+=r[3]*q;cap+=r[4]*q}});
+    if(a.length){pick=a.join('・')+(nightWith?'／夜は'+nightWith+'と':'');var fr=freeNext();tot='宿泊 <b>'+(fr?0:fmt(sum))+'</b> G'+(fr?'（無料）':'')+(cap<(size||1)?' <small style="color:#c0302a">※人数より少ないです</small>':'');can=true}go='泊まる'}
+  else if(TAB==='rest'){if(restWith){pick='休憩室：'+restWith+'と';tot='休憩 <b>'+REST_FEE+'</b> G';can=true}go='誘ってみる';pink=true}
+  else if(TAB==='food'){var b=[],s=0;FOODS.forEach(function(f,i){if(foodQ[i]){b.push(f[0]+'×'+foodQ[i]);s+=f[2]*foodQ[i]}});if(b.length){pick=b.join('・');tot='合計 <b>'+fmt(s)+'</b> G';can=true}go='注文する'}
+  else if(TAB==='talk'){if(lobby.length){pick='ロビーの会話：'+lobby.join('と');can=lobby.length===2;tot=lobby.length===2?'<b>無料</b>':'もう1人選んでね'}go='耳を傾ける'}
+  $('order').hidden=!show;$('pick').textContent=pick;$('pick').hidden=!pick;$('tot').innerHTML=tot;
+  $('go').textContent=go;$('go').className='btn '+(pink?'pink':'gold');$('go').disabled=sending||!can;$('clr').disabled=!pick;
+}
+function board(){
+  var h='<h4>【お部屋】</h4>'+ROOMS.map(function(r){return '<div class="ln"><span>'+r[1]+'（'+r[4]+'人まで）</span><b>'+r[3]+' G</b></div>'}).join('');
+  h+='<p>どのお部屋も、HP・MP全回復＋状態異常をすべて治します。泊まった夜は、仲間の1人とゆっくりお話しできますよ！</p>';
+  h+='<h4>【休憩室💕】</h4><div class="ln"><span>2人・数時間（HP・MP半分回復）</span><b>'+REST_FEE+' G</b></div>';
+  h+='<h4>【朝ごはん】</h4>'+FOODS.map(function(f){return '<div class="ln"><span>'+f[0]+'</span><b>'+f[2]+' G</b></div>'}).join('');
+  h+='<h4>【宿帳スタンプ】</h4><div class="ln"><span>5回泊まると、6回目が無料！</span><b>FREE</b></div>';
+  $('board').innerHTML=h;
+}
+
+document.addEventListener('click',function(e){
+  var t;
+  if(t=e.target.closest('[data-r]')){var r=t.dataset.r;roomQ[r]=Math.max(0,Math.min(4,roomQ[r]+(+t.dataset.d)));if(+t.dataset.d>0){lastRoom=r;say({single:'個室ですね！ 静かでゆっくりできますよ！',double:'二人部屋ですね！ 窓から街がよく見えるんです！',triple:'三人部屋ですね！ みんなでわいわい、楽しいですよ！'}[r],'smile',3500)}draw();return}
+  if(t=e.target.closest('[data-nw]')){nightWith=nightWith===t.dataset.nw?'':t.dataset.nw;draw();if(nightWith)say(nightWith+'さんと、夜のおしゃべりですね！ えへへ、いいですね～','affection',3500);return}
+  if(t=e.target.closest('[data-rw]')){restWith=restWith===t.dataset.rw?'':t.dataset.rw;draw();if(restWith)say(restWith+'さんと……ですか！？ は、はいっ！ あとはお相手しだい、ですね……！','shy',3500);return}
+  if(t=e.target.closest('[data-f]')){var i=+t.dataset.f;foodQ[i]=Math.max(0,Math.min(6,foodQ[i]+(+t.dataset.d)));draw();if(+t.dataset.d>0)say(i?'お弁当ですね！ 腕によりをかけて作ります！':'朝ごはんですね！ 焼きたてのパンもありますよ！','proud',3000);return}
+  if(t=e.target.closest('[data-lb]')){var n=t.dataset.lb,j=lobby.indexOf(n);if(j>=0)lobby.splice(j,1);else{if(lobby.length>=2)lobby.shift();lobby.push(n)}draw();return}
+  if(t=e.target.closest('[data-rumor]')){if(t.dataset.rumor==='emma'){put('「エマさん、最近なにか面白い話はありますか？」',['ここだけの話ですよ？ ……えへへ、実はですね！','whisper']);seq(['whisper'],1800,'smile')}else put('（ロビーで一息つきながら、泊まり客の冒険者たちの噂話に耳を傾ける）',['冒険者さんたちのお話、たまに大げさなんですよね～','think']);return}
+});
+$('clr').onclick=function(){if(TAB==='stay'){ROOMS.forEach(function(r){roomQ[r[0]]=0});nightWith=''}else if(TAB==='rest')restWith='';else if(TAB==='food')foodQ=[0,0];else if(TAB==='talk')lobby=[];draw();say('はいっ、またいつでもどうぞ！','smile',3000)};
+$('go').onclick=function(){
+  if(TAB==='stay'){var a=[];ROOMS.forEach(function(r){if(roomQ[r[0]])a.push(r[1]+'を'+roomQ[r[0]]+'部屋')});if(!a.length)return;
+    put('「エマさん、今夜は'+a.join('、')+'でお願いします」'+(freeNext()?'（宿帳スタンプの無料特典を使う）':'')+(nightWith?'（夜は'+nightWith+'と二人で話す）':''),['はいっ！ すぐにご用意しますね！','smile']);seq(['key_1','key_2','key_3'],550,'smile')}
+  else if(TAB==='rest'){if(!restWith)return;put('（'+restWith+'に、宿屋の休憩室で少し二人きりで過ごさないかと誘ってみる）',[KEY_LINES[Math.floor(Math.random()*KEY_LINES.length)],'key_wink']);seq(['key_wink'],2600,'shy')}
+  else if(TAB==='food'){var b=[];FOODS.forEach(function(f,i){if(foodQ[i])b.push(f[0]+'を'+foodQ[i]+'つ')});if(!b.length)return;put('「エマさん、'+b.join('、')+'お願いします」',['はいっ！ すぐにご用意しますね！','proud']);seq(['breakfast_1','breakfast_2'],700,'smile')}
+  else if(TAB==='talk'){if(lobby.length!==2)return;put('（ロビーの隅で紅茶を飲みながら、'+lobby[0]+'と'+lobby[1]+'の会話にこっそり耳を傾ける）',['あっ、あのお二人……何のお話でしょうね？','think'])}
+};
+
+/* 会話欄 */
+function put(text,line){var m=$('msg');m.value=text;grow();m.focus();m.setSelectionRange(m.value.length,m.value.length);$('status').textContent='書き換えてもOK。「送る」かEnterで送信します。';if(line)say(line[0],line[1],4000)}
+function talk(text){
+  text=String(text||'').trim();if(!text||sending)return;
+  if(typeof sendMessage!=='function'){$('status').textContent='本編チャットで送信できます：'+text;return}
+  sending=true;draw();$('status').textContent='送信中…';
+  Promise.resolve().then(function(){return sendMessage(text)}).then(function(){
+    if($('msg').value.trim()===text){$('msg').value='';grow()}$('status').textContent='チャットに送信しました。返事はチャット欄に届きます。'
+  },function(){$('status').textContent='送信できませんでした。もう一度お試しください。';face('worried')}).then(function(){sending=false;draw()});
+}
+$('send').onclick=function(){talk($('msg').value)};
+$('msg').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();talk(this.value)}});
+function grow(){var m=$('msg');m.style.height='36px';m.style.height=Math.min(84,m.scrollHeight+2)+'px';m.style.overflowY=m.scrollHeight>84?'auto':'hidden'}
+$('msg').addEventListener('input',grow);
+function tpl(open){$('chips').classList.toggle('open',open);$('tpl').classList.toggle('on',open);$('tpl').textContent=open?'定型文 ▴':'定型文 ▾'}
+$('tpl').onclick=function(e){e.stopPropagation();tpl(!$('chips').classList.contains('open'))};
+document.addEventListener('click',function(e){if(!e.target.closest('#chips')&&!e.target.closest('#tpl'))tpl(false)});
+document.querySelectorAll('#chips button').forEach(function(b){b.onclick=function(){tpl(false);put(b.dataset.say)}});
+
+/* 退店（2回押し） */
+$('leave').onclick=function(){
+  var b=this;if(sending)return;
+  if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='もう一度';$('status').textContent='送信内容：'+LEAVE_TEXT;clearTimeout(b._t);b._t=setTimeout(function(){b.classList.remove('arm');b.textContent=b.dataset.label;$('status').textContent=''},8000);return}
+  clearTimeout(b._t);b.classList.remove('arm');b.textContent=b.dataset.label;
+  if(typeof sendMessage!=='function'){$('status').textContent='本編チャットで送信できます：'+LEAVE_TEXT;return}
+  sending=true;draw();$('status').textContent='送信中…';
+  Promise.resolve().then(function(){return sendMessage(LEAVE_TEXT)}).then(function(){$('status').textContent='チャットに送信しました。';seq(['bow_1','bow_2'],500,'smile');say('いってらっしゃいませ！ 無事に帰ってきてくださいね！','smile')},function(){$('status').textContent='送信できませんでした。もう一度お試しください。'}).then(function(){sending=false;draw()});
+};
+
+/* ===== StoryEngine から呼ばれる ===== */
+function read(sd,name){var v;try{v=sd.getValue(name);if(v===undefined)v=sd.getValue('var_'+name)}catch(e){var o=sd&&sd.getObject?sd.getObject():{};v=o[name]!==undefined?o[name]:o['var_'+name]}return v}
+function onUpdateData(statusData){
+  try{var st=parse(read(statusData,STATE_VAR));S=st||{};$('err').hidden=true}catch(e){$('err').hidden=false;$('err').textContent='記録の一部を読み込めませんでした。前回の表示を維持しています。'}
+  COUNT=num(read(statusData,COUNT_VAR));
+  if(isFinite(prevCount)&&isFinite(COUNT)&&COUNT>prevCount){var room=lastRoom;seq(['stamp_1','stamp_2'],600,'smile');say('宿帳にスタンプ、ポンっ！ ……それでは、ごゆっくりお休みください！','proud');setTimeout(function(){sleepFx(room,false)},1500);ROOMS.forEach(function(r){roomQ[r[0]]=0});nightWith=''}
+  REST=num(read(statusData,REST_VAR));
+  if(isFinite(prevRest)&&isFinite(REST)&&REST>prevRest){restWith='';sleepFx('rest',true)}
+  prevRest=REST;prevCount=COUNT;draw();
+}
+board();draw();
+setInterval(function(){if(WORKING||document.activeElement===$('msg')||$('msg').value||document.querySelector('.arm')||$('night').classList.contains('on'))return;var l=IDLE[Math.floor(Math.random()*IDLE.length)];say(l[0],l[1])},15000);
+</script>
