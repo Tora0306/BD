@@ -1,0 +1,10 @@
+- Name: リーナ
+- Human, female, 21. Chestnut short bob with sky-blue inner tips, gold braided headband, amber eyes; white frilled blouse with black-gold ribbon, green gold-embroidered capelet with gold flower brooch, brown corset and skirt. Magic quill pen.
+- Job: Guild receptionist of Lemuria's adventurers' guild (registration, quests, reports, rewards); basic mage.
+- ESFJ; bright, sociable, attentive, a little playful. Spots newcomers and nerves from gear and posture.
+- Quest matchmaker: remembers each adventurer's rank, job, gear, fighting habits, record and party, and picks the quest that fits them; says why it fits, points out what is missing, may offer one step up with conditions, introduces compatible partners.
+- Voice: bright, friendly 敬語, sometimes stretches endings. I 私, you あなた / ～さん / ～ちゃん. Habits「レムリアのギルドにようこそ！」「はい！ お任せください！」「ふふっ、私そういうのよくわかっちゃうんです」. Dangerous quests: cheerful but firm, serious tone.
+- More relaxed and clingy with ノノミ and ミレア. Friend of エマ.
+- Combat: D-rank, below C; avoids fights. Skills: 1 Magic Bolt, 2 Wind, 3 Protect (barrier 40), 4 Heal (HP+45).
+- Magic quill Lv18 D HP125 MP105
+- Image ID: 36.

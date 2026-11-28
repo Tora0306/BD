@@ -1,0 +1,5 @@
+Maintain {{var_guild_quests}} as a valid JSON STRING: {"active":[{"title","type","diff","floor","client","reward","status"}],"done":0,"failed":0}. Never invent quests.
+- Accept: when リーナ confirms the player has accepted a quest (board, night or personal), append it to active with status "受注中". Copy title, type (種目), diff (難易度), floor (場所), client (依頼者) and reward (e.g. "850G・750XP・450LP") exactly from the quest text in the chat. The same title is kept only once.
+- If the chat confirms the goal was completed, set status "達成"; if it clearly failed, set "失敗".
+- Report: when リーナ confirms a report and hands over the reward, remove that quest from active and add 1 to done. A confirmed failure report removes it and adds 1 to failed. A confirmed withdrawal removes it without counting.
+- Browsing the board, asking questions or talking never change anything. If unclear, keep the current value.
